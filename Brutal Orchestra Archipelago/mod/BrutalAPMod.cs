@@ -13,6 +13,10 @@ namespace BrutalOrchestraAr
     {
         private ConfigEntry<string> serverUrl;
         private ConfigEntry<string> slotName;
+        public ConfigEntry<int> configShopFar;
+        public ConfigEntry<int> configShopOrp;
+        public ConfigEntry<int> configBattleCount;
+        public ConfigEntry<int> configBossCount;
 
         public static APClient apClient;
         public static HashSet<string> receivedAPItems = new HashSet<string>();
@@ -33,6 +37,11 @@ namespace BrutalOrchestraAr
         public static int shopCountOrp = 6;
         public static int battleLimit = 12;
         public static int bossCount = 3;
+        // Fallback values from config (used if slot_data not received)
+        public static int fallbackShopFar = 6;
+        public static int fallbackShopOrp = 6;
+        public static int fallbackBattleCount = 12;
+        public static int fallbackBossCount = 3;
 
         public static GameInformationHolder cachedHolder = null;
         public static Queue<Action> pendingActions = new Queue<Action>();
@@ -148,6 +157,57 @@ namespace BrutalOrchestraAr
         };
 
         private const string PlayerPrefsKey = "BrutalAP_ReceivedItems";
+        private const string CountersKey = "BrutalAP_Counters";
+        
+        public static void SaveCounters()
+        {
+            var counters = new Dictionary<string, int>
+            {
+                {"battle", battleCount},
+                {"farMoney", farMoneyChestCount},
+                {"orpMoney", orpMoneyChestCount},
+                {"farArtifact", farArtifactChestCount},
+                {"orpArtifact", orpArtifactChestCount},
+                {"buyHero", buyHeroCount},
+                {"farShop", farShopCount},
+                {"orpShop", orpShopCount},
+            };
+            // Save as simple string: key=value;key=value...
+            string data = string.Join(";", counters.Select(kv => kv.Key + "=" + kv.Value));
+            PlayerPrefs.SetString(CountersKey, data);
+            PlayerPrefs.Save();
+            Debug.Log("AP: Saved counters: " + data);
+        }
+
+        public static void LoadCounters()
+        {
+            if (PlayerPrefs.HasKey(CountersKey))
+            {
+                string data = PlayerPrefs.GetString(CountersKey, "");
+                if (!string.IsNullOrEmpty(data))
+                {
+                    foreach (var pair in data.Split(';'))
+                    {
+                        var parts = pair.Split('=');
+                        if (parts.Length != 2) continue;
+                        int val;
+                        if (!int.TryParse(parts[1], out val)) continue;
+                        switch (parts[0])
+                        {
+                            case "battle": battleCount = val; break;
+                            case "farMoney": farMoneyChestCount = val; break;
+                            case "orpMoney": orpMoneyChestCount = val; break;
+                            case "farArtifact": farArtifactChestCount = val; break;
+                            case "orpArtifact": orpArtifactChestCount = val; break;
+                            case "buyHero": buyHeroCount = val; break;
+                            case "farShop": farShopCount = val; break;
+                            case "orpShop": orpShopCount = val; break;
+                        }
+                    }
+                    Debug.Log("AP: Loaded counters: " + data);
+                }
+            }
+        }
 
         // Unlock methods (unchanged)
         static void UnlockNextHero()
@@ -377,8 +437,18 @@ namespace BrutalOrchestraAr
                 "Archipelago server WebSocket URL");
             slotName = Config.Bind("Server", "SlotName", "Test1",
                 "Your player slot name on the server");
+            var cfgShopFar = Config.Bind("Server", "shop_far", 6, "Fallback Far shop count");
+            var cfgShopOrp = Config.Bind("Server", "shop_orp", 6, "Fallback Orp shop count");
+            var cfgBattle = Config.Bind("Server", "battle_count", 12, "Fallback battle count");
+            var cfgBoss = Config.Bind("Server", "boss_count", 3, "Fallback boss count");
+            
+            fallbackShopFar = cfgShopFar.Value;
+            fallbackShopOrp = cfgShopOrp.Value;
+            fallbackBattleCount = cfgBattle.Value;
+            fallbackBossCount = cfgBoss.Value;
 
             LoadReceivedItems();
+            LoadCounters();
             SkipTutorial();
 
             var harmony = new Harmony("brutal.ap.mod");
@@ -408,11 +478,22 @@ namespace BrutalOrchestraAr
         {
             try
             {
-                int shopFar = 6, shopOrp = 6, battles = 12, bosses = 3;
-                ParseInt(slotDataJson, "\"shop_far\"", ref shopFar);
-                ParseInt(slotDataJson, "\"shop_orp\"", ref shopOrp);
-                ParseInt(slotDataJson, "\"battle_count\"", ref battles);
-                ParseInt(slotDataJson, "\"boss_count\"", ref bosses);
+                int shopFar = 0, shopOrp = 0, battles = 0, bosses = 0;
+
+                // Parse slot_data if available
+                if (!string.IsNullOrEmpty(slotDataJson))
+                {
+                    ParseInt(slotDataJson, "\"shop_far\"", ref shopFar);
+                    ParseInt(slotDataJson, "\"shop_orp\"", ref shopOrp);
+                    ParseInt(slotDataJson, "\"battle_count\"", ref battles);
+                    ParseInt(slotDataJson, "\"boss_count\"", ref bosses);
+                }
+
+                // Fallback to config if slot_data didn't provide values (0)
+                if (shopFar == 0) shopFar = fallbackShopFar;
+                if (shopOrp == 0) shopOrp = fallbackShopOrp;
+                if (battles == 0) battles = fallbackBattleCount;
+                if (bosses == 0) bosses = fallbackBossCount;
 
                 shopCountFar = shopFar;
                 shopCountOrp = shopOrp;
@@ -420,6 +501,8 @@ namespace BrutalOrchestraAr
                 bossCount = bosses;
 
                 locationIDs.Clear();
+
+                // Fixed locations
                 int id = 100;
                 locationIDs["Far Shore Access"] = id++;
                 locationIDs["Orpheum Access"] = id++;
@@ -437,18 +520,23 @@ namespace BrutalOrchestraAr
                 locationIDs["BuyHero_3"] = id++;
                 locationIDs["BuyHero_4"] = id++;
 
+                // Battles
                 for (int i = 1; i <= battleLimit; i++)
                     locationIDs[$"Battle_{i}"] = id++;
+
+                // Bosses
                 if (bossCount >= 1) locationIDs["Far Boss"] = id++;
                 if (bossCount >= 2) locationIDs["Orp Boss"] = id++;
                 if (bossCount >= 3) locationIDs["Garden Boss"] = id++;
 
+                // Shops
                 for (int i = 1; i <= shopCountFar; i++)
                     locationIDs[$"Shop_Far_{i}"] = id++;
                 for (int i = 1; i <= shopCountOrp; i++)
                     locationIDs[$"Shop_Orp_{i}"] = id++;
 
-                Debug.Log($"AP: Initialized location IDs. Battles: {battles}, Bosses: {bosses}, Far Shops: {shopFar}, Orp Shops: {shopOrp}");
+                Debug.Log($"AP: Initialized location IDs. Battles: {battleLimit}, Bosses: {bossCount}, Far Shops: {shopCountFar}, Orp Shops: {shopCountOrp}");
+
                 InitStartingChecks();
             }
             catch (Exception e) { Debug.LogError("InitSlotData error: " + e); }
@@ -470,10 +558,10 @@ namespace BrutalOrchestraAr
 
         static void SaveReceivedItems()
         {
+            // Save everything that is not transient (coins) and not one-time unlock triggers
             var itemsToSave = receivedAPItems.Where(item =>
                 !transientItems.Contains(item) && 
-                item != "Hero Unlock" && item != "Item Unlock" &&
-                item != "Orpheum Access" && item != "Garden Access"
+                item != "Hero Unlock" && item != "Item Unlock"
             ).ToArray();
             string data = string.Join(";", itemsToSave);
             PlayerPrefs.SetString(PlayerPrefsKey, data);
@@ -489,19 +577,11 @@ namespace BrutalOrchestraAr
                 if (!string.IsNullOrEmpty(data))
                 {
                     string[] items = data.Split(';');
-                    bool changed = false;
                     foreach (string item in items)
                     {
-                        if (string.IsNullOrEmpty(item) || 
-                            item == "Hero Unlock" || item == "Item Unlock" ||
-                            item == "Orpheum Access" || item == "Garden Access")
-                        {
-                            changed = true;
-                            continue;
-                        }
-                        receivedAPItems.Add(item);
+                        if (!string.IsNullOrEmpty(item) && item != "Hero Unlock" && item != "Item Unlock")
+                            receivedAPItems.Add(item);
                     }
-                    if (changed) SaveReceivedItems();
                     Debug.Log("AP: Loaded received items: " + data);
                 }
             }
@@ -533,10 +613,15 @@ namespace BrutalOrchestraAr
                 }
             }
 
-            if (!transientItems.Contains(itemName) && itemName != "Hero Unlock" && itemName != "Item Unlock" &&
-                itemName != "Orpheum Access" && itemName != "Garden Access")
+            // Always add to runtime set (except transient coins)
+            if (!transientItems.Contains(itemName))
             {
-                if (receivedAPItems.Add(itemName)) SaveReceivedItems();
+                receivedAPItems.Add(itemName);
+                // Save only what should persist (everything except one-time unboxing items)
+                if (itemName != "Hero Unlock" && itemName != "Item Unlock")
+                {
+                    SaveReceivedItems();
+                }
             }
         }
 
