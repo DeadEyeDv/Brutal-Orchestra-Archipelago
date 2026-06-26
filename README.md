@@ -2,9 +2,9 @@ Brutal Orchestra Archipelago Mod
 
 Archipelago randomizer integration for Brutal Orchestra.
 
-	Installation
+#	Installation
 
-	Mod (C# client)
+#	Mod (C# client)
 1. Download `BrutalOrchestraArchipelago.dll` from [Releases](https://github.com/DeadEyeDv/BrutalOrchestraArchipelago/releases).
 2. Place the DLL in `BepInEx/plugins/`.
 3. Run the game once to generate the config file at `BepInEx/config/brutal.ap.mod.cfg`.
