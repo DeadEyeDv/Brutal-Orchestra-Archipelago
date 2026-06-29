@@ -1,6 +1,8 @@
 from worlds.AutoWorld import World
 from BaseClasses import Item, ItemClassification, Location, Region
-from .options import BrutalOrchestraOptions
+from .options import BrutalOrchestraOptions, FarBattleCount, OrpBattleCount, \
+    FarMoneyChests, OrpMoneyChests, FarArtifactChests, OrpArtifactChests, \
+    FarShopCount, OrpShopCount, BossCount
 
 class BrutalOrchestraWorld(World):
     game = "Brutal Orchestra"
@@ -44,92 +46,133 @@ class BrutalOrchestraWorld(World):
         "HundredPercent","UngodEmissary","AntonSad","ProdigalFlee"
     ]
 
-    location_name_to_id = {}  # Будет заполнено в generate_early
+    # Статический словарь со всеми возможными локациями (максимальные значения опций)
+    location_name_to_id = {
+        "Far Shore Access": 100,
+        "Orpheum Access": 101,
+        "Sepulchre Access": 102,
+        "BuyHero_1": 103,
+        "BuyHero_2": 104,
+        "BuyHero_3": 105,
+        "BuyHero_4": 106
+    }
+
+    # Far Battles
+    fid = 200
+    for i in range(1, FarBattleCount.range_end + 1):
+        location_name_to_id[f"Far_Battle_{i}"] = fid
+        fid += 1
+
+    # Orp Battles
+    oid = 300
+    for i in range(1, OrpBattleCount.range_end + 1):
+        location_name_to_id[f"Orp_Battle_{i}"] = oid
+        oid += 1
+
+    # Far Money Chests
+    fmid = 400
+    for i in range(1, FarMoneyChests.range_end + 1):
+        location_name_to_id[f"Far_MoneyChest_{i}"] = fmid
+        fmid += 1
+
+    # Orp Money Chests
+    omid = 500
+    for i in range(1, OrpMoneyChests.range_end + 1):
+        location_name_to_id[f"Orp_MoneyChest_{i}"] = omid
+        omid += 1
+
+    # Far Artifact Chests
+    faid = 600
+    for i in range(1, FarArtifactChests.range_end + 1):
+        location_name_to_id[f"Far_ArtifactChest_{i}"] = faid
+        faid += 1
+
+    # Orp Artifact Chests
+    oaid = 700
+    for i in range(1, OrpArtifactChests.range_end + 1):
+        location_name_to_id[f"Orp_ArtifactChest_{i}"] = oaid
+        oaid += 1
+
+    # Bosses
+    bid = 800
+    location_name_to_id["Far Boss"] = bid
+    bid += 1
+    location_name_to_id["Orp Boss"] = bid
+    bid += 1
+    location_name_to_id["Sepulchre Boss"] = bid
+    bid += 1
+
+    # Far Shops
+    fsid = 900
+    for i in range(1, FarShopCount.range_end + 1):
+        location_name_to_id[f"Shop_Far_{i}"] = fsid
+        fsid += 1
+
+    # Orp Shops
+    osid = 1000
+    for i in range(1, OrpShopCount.range_end + 1):
+        location_name_to_id[f"Shop_Orp_{i}"] = osid
+        osid += 1
+
+    # Heroes
+    hid = 1100
+    for name in hero_names:
+        location_name_to_id[f"Hero_{name}"] = hid
+        hid += 1
+
+    # Item Unlocks
+    iid = 1200
+    for uid in item_unlock_ids:
+        location_name_to_id[f"Item_{uid}"] = iid
+        iid += 1
 
     def generate_early(self):
-        self.far_battle_count = self.options.far_battle_count.value
-        self.orp_battle_count = self.options.orp_battle_count.value
-        self.far_money_chests = self.options.far_money_chests.value
-        self.orp_money_chests = self.options.orp_money_chests.value
-        self.far_artifact_chests = self.options.far_artifact_chests.value
-        self.orp_artifact_chests = self.options.orp_artifact_chests.value
-        self.shop_count_far = self.options.far_shop_count.value
-        self.shop_count_orp = self.options.orp_shop_count.value
-        self.boss_count = self.options.boss_count.value
-
-        # Заполняем location_name_to_id с фиксированными смещениями (как в клиенте)
-        self.location_name_to_id.clear()
-
-        # Базовые (100-106)
-        base = 100
-        self.location_name_to_id["Far Shore Access"] = base; base += 1
-        self.location_name_to_id["Orpheum Access"] = base; base += 1
-        self.location_name_to_id["Sepulchre Access"] = base; base += 1
-        for i in range(1, 5):
-            self.location_name_to_id[f"BuyHero_{i}"] = base; base += 1
-
-        # Битвы: Far 200+, Orp 300+
-        fid = 200
-        for i in range(1, self.far_battle_count + 1):
-            self.location_name_to_id[f"Far_Battle_{i}"] = fid; fid += 1
-        oid = 300
-        for i in range(1, self.orp_battle_count + 1):
-            self.location_name_to_id[f"Orp_Battle_{i}"] = oid; oid += 1
-
-        # Денежные сундуки: Far 400+, Orp 500+
-        fmid = 400
-        for i in range(1, self.far_money_chests + 1):
-            self.location_name_to_id[f"Far_MoneyChest_{i}"] = fmid; fmid += 1
-        omid = 500
-        for i in range(1, self.orp_money_chests + 1):
-            self.location_name_to_id[f"Orp_MoneyChest_{i}"] = omid; omid += 1
-
-        # Артефактные сундуки: Far 600+, Orp 700+
-        faid = 600
-        for i in range(1, self.far_artifact_chests + 1):
-            self.location_name_to_id[f"Far_ArtifactChest_{i}"] = faid; faid += 1
-        oaid = 700
-        for i in range(1, self.orp_artifact_chests + 1):
-            self.location_name_to_id[f"Orp_ArtifactChest_{i}"] = oaid; oaid += 1
-
-        # Боссы: 800+
-        bid = 800
-        if self.boss_count >= 1:
-            self.location_name_to_id["Far Boss"] = bid; bid += 1
-        if self.boss_count >= 2:
-            self.location_name_to_id["Orp Boss"] = bid; bid += 1
-        if self.boss_count >= 3:
-            self.location_name_to_id["Sepulchre Boss"] = bid; bid += 1
-
-        # Магазины: Far 900+, Orp 1000+
-        fsid = 900
-        for i in range(1, self.shop_count_far + 1):
-            self.location_name_to_id[f"Shop_Far_{i}"] = fsid; fsid += 1
-        osid = 1000
-        for i in range(1, self.shop_count_orp + 1):
-            self.location_name_to_id[f"Shop_Orp_{i}"] = osid; osid += 1
-
-        # Герои (все 25): 1100+
-        hid = 1100
+        # Запоминаем, какие локации реально используются (на основе опций)
+        self.active_locations = set()
+        # Базовые всегда
+        self.active_locations.update([
+            "Far Shore Access", "Orpheum Access", "Sepulchre Access",
+            "BuyHero_1", "BuyHero_2", "BuyHero_3", "BuyHero_4"
+        ])
+        # Добавляем выбранные опциями локации
+        for i in range(1, self.options.far_battle_count.value + 1):
+            self.active_locations.add(f"Far_Battle_{i}")
+        for i in range(1, self.options.orp_battle_count.value + 1):
+            self.active_locations.add(f"Orp_Battle_{i}")
+        for i in range(1, self.options.far_money_chests.value + 1):
+            self.active_locations.add(f"Far_MoneyChest_{i}")
+        for i in range(1, self.options.orp_money_chests.value + 1):
+            self.active_locations.add(f"Orp_MoneyChest_{i}")
+        for i in range(1, self.options.far_artifact_chests.value + 1):
+            self.active_locations.add(f"Far_ArtifactChest_{i}")
+        for i in range(1, self.options.orp_artifact_chests.value + 1):
+            self.active_locations.add(f"Orp_ArtifactChest_{i}")
+        for i in range(1, self.options.far_shop_count.value + 1):
+            self.active_locations.add(f"Shop_Far_{i}")
+        for i in range(1, self.options.orp_shop_count.value + 1):
+            self.active_locations.add(f"Shop_Orp_{i}")
+        if self.options.boss_count.value >= 1:
+            self.active_locations.add("Far Boss")
+        if self.options.boss_count.value >= 2:
+            self.active_locations.add("Orp Boss")
+        if self.options.boss_count.value >= 3:
+            self.active_locations.add("Sepulchre Boss")
         for name in self.hero_names:
-            self.location_name_to_id[f"Hero_{name}"] = hid; hid += 1
-
-        # Предметы (19): 1200+
-        iid = 1200
+            self.active_locations.add(f"Hero_{name}")
         for uid in self.item_unlock_ids:
-            self.location_name_to_id[f"Item_{uid}"] = iid; iid += 1
+            self.active_locations.add(f"Item_{uid}")
 
     def fill_slot_data(self):
         return {
-            "far_battle_count": self.far_battle_count,
-            "orp_battle_count": self.orp_battle_count,
-            "far_money_chests": self.far_money_chests,
-            "orp_money_chests": self.orp_money_chests,
-            "far_artifact_chests": self.far_artifact_chests,
-            "orp_artifact_chests": self.orp_artifact_chests,
-            "shop_far": self.shop_count_far,
-            "shop_orp": self.shop_count_orp,
-            "boss_count": self.boss_count,
+            "far_battle_count": self.options.far_battle_count.value,
+            "orp_battle_count": self.options.orp_battle_count.value,
+            "far_money_chests": self.options.far_money_chests.value,
+            "orp_money_chests": self.options.orp_money_chests.value,
+            "far_artifact_chests": self.options.far_artifact_chests.value,
+            "orp_artifact_chests": self.options.orp_artifact_chests.value,
+            "shop_far": self.options.far_shop_count.value,
+            "shop_orp": self.options.orp_shop_count.value,
+            "boss_count": self.options.boss_count.value,
         }
 
     def create_regions(self):
@@ -145,7 +188,7 @@ class BrutalOrchestraWorld(World):
         orp.connect(sep)
         sep.connect(vic)
 
-        # Распределяем локации по префиксам
+        # Создаём локации только из активного набора
         far_prefixes = ("Far Shore Access", "Far_Battle", "Far_MoneyChest", "Far_ArtifactChest",
                         "BuyHero_1", "BuyHero_2", "Shop_Far", "Far Boss",
                         "Hero_", "Item_")
@@ -153,7 +196,7 @@ class BrutalOrchestraWorld(World):
                         "BuyHero_3", "BuyHero_4", "Shop_Orp", "Orp Boss")
         sep_prefixes = ("Sepulchre Access", "Sepulchre Boss")
 
-        for name, lid in self.location_name_to_id.items():
+        for name in self.active_locations:
             if name.startswith(far_prefixes):
                 region = far
             elif name.startswith(orp_prefixes):
@@ -162,21 +205,23 @@ class BrutalOrchestraWorld(World):
                 region = sep
             else:
                 continue
-            loc = Location(self.player, name, lid, region)
+            # id берём из общего статического словаря
+            loc = Location(self.player, name, self.location_name_to_id[name], region)
             region.locations.append(loc)
 
+        # Sepulchre Boss Defeat
         loc = Location(self.player, "Sepulchre Boss Defeat", None, sep)
         sep.locations.append(loc)
 
     def create_items(self):
+        # Предметы только из исходного списка (всегда одинаковые)
         for name in self.item_names:
             item = Item(name, ItemClassification.progression,
                        self.item_name_to_id[name], self.player)
             self.multiworld.itempool.append(item)
 
-        total_active = len(self.location_name_to_id)
+        total_active = len(self.active_locations)
         needed = total_active - len(self.item_names)
-
         for i in range(needed):
             name = "5 Coins" if i % 2 == 0 else "10 Coins"
             item = Item(name, ItemClassification.filler,
@@ -193,10 +238,10 @@ class BrutalOrchestraWorld(World):
         self.multiworld.get_entrance("Orpheum -> Sepulchre", self.player).access_rule = \
             lambda state: state.has("Sepulchre Access", self.player)
 
-        if "Orp Boss" in self.location_name_to_id:
+        if "Orp Boss" in self.active_locations:
             self.multiworld.get_location("Orp Boss", self.player).access_rule = \
                 lambda state: state.has("Boss 1", self.player)
-        if "Sepulchre Boss" in self.location_name_to_id:
+        if "Sepulchre Boss" in self.active_locations:
             self.multiworld.get_location("Sepulchre Boss", self.player).access_rule = \
                 lambda state: state.has("Boss 2", self.player)
 
