@@ -12,6 +12,7 @@ namespace BrutalOrchestraAr
         private ClientWebSocket socket = new ClientWebSocket();
         private string serverUri;
         private string playerName;
+        public static string CurrentSeed = "";
 
         public APClient(string uri, string name)
         {
@@ -52,7 +53,6 @@ namespace BrutalOrchestraAr
                 {
                     int start = msg.IndexOf('[');
                     if (start == -1) break;
-
                     int depth = 0;
                     int end = -1;
                     for (int i = start; i < msg.Length; i++)
@@ -69,6 +69,15 @@ namespace BrutalOrchestraAr
 
                     if (!sentConnect && json.Contains("\"cmd\":\"RoomInfo\""))
                     {
+                        // Parse seed_name for save slot identification
+                        int seedIdx = json.IndexOf("\"seed_name\":\"");
+                        if (seedIdx != -1)
+                        {
+                            int seedStart = seedIdx + 13;
+                            int seedEnd = json.IndexOf("\"", seedStart);
+                            if (seedEnd != -1)
+                                CurrentSeed = json.Substring(seedStart, seedEnd - seedStart);
+                        }
                         Debug.Log("AP: Got RoomInfo, sending Connect");
                         sentConnect = true;
                         SendConnectPacket();
@@ -76,6 +85,7 @@ namespace BrutalOrchestraAr
                     else if (json.Contains("\"cmd\":\"Connected\""))
                     {
                         Debug.Log("AP: Successfully connected to room!");
+                        // Extract slot_data
                         int slotDataIndex = json.IndexOf("\"slot_data\":{");
                         if (slotDataIndex != -1)
                         {
@@ -118,57 +128,29 @@ namespace BrutalOrchestraAr
 
         private void ParseReceivedItems(string json)
         {
-            int itemsIndex = json.IndexOf("\"items\":[");
-            if (itemsIndex == -1) return;
-
-            int bracketOpen = json.IndexOf('[', itemsIndex);
-            if (bracketOpen == -1) return;
-
-            int depth = 0;
-            int bracketClose = -1;
-            for (int i = bracketOpen; i < json.Length; i++)
-            {
-                if (json[i] == '[') depth++;
-                else if (json[i] == ']') { depth--; if (depth == 0) { bracketClose = i; break; } }
-            }
-            if (bracketClose == -1) return;
-
-            string itemsArray = json.Substring(bracketOpen + 1, bracketClose - bracketOpen - 1);
-
+            int itemsIdx = json.IndexOf("\"items\":[");
+            if (itemsIdx == -1) return;
+            int start = json.IndexOf('[', itemsIdx);
+            int end = json.IndexOf(']', start);
+            if (start == -1 || end == -1) return;
+            string itemsArray = json.Substring(start, end - start + 1);
+            // Простейший разбор: ищем все "item":число
             int pos = 0;
-            while (pos < itemsArray.Length)
+            while ((pos = itemsArray.IndexOf("\"item\":", pos)) != -1)
             {
-                int objStart = itemsArray.IndexOf('{', pos);
-                if (objStart == -1) break;
-                int objDepth = 0;
-                int objEnd = -1;
-                for (int i = objStart; i < itemsArray.Length; i++)
+                pos += 7;
+                int numStart = pos;
+                while (numStart < itemsArray.Length && !char.IsDigit(itemsArray[numStart])) numStart++;
+                int numEnd = numStart;
+                while (numEnd < itemsArray.Length && char.IsDigit(itemsArray[numEnd])) numEnd++;
+                if (numEnd > numStart && long.TryParse(itemsArray.Substring(numStart, numEnd - numStart), out long itemId))
                 {
-                    if (itemsArray[i] == '{') objDepth++;
-                    else if (itemsArray[i] == '}') { objDepth--; if (objDepth == 0) { objEnd = i; break; } }
+                    if (BrutalAPMod.itemIdToName.TryGetValue(itemId, out string itemName))
+                        BrutalAPMod.OnItemReceived(itemName);
+                    else
+                        Debug.LogWarning($"Unknown item ID: {itemId}");
                 }
-                if (objEnd == -1) break;
-                string itemObj = itemsArray.Substring(objStart, objEnd - objStart + 1);
-
-                int itemIdKey = itemObj.IndexOf("\"item\":");
-                if (itemIdKey != -1)
-                {
-                    int valStart = itemIdKey + 7;
-                    while (valStart < itemObj.Length && (itemObj[valStart] == ' ' || itemObj[valStart] == ':')) valStart++;
-                    int valEnd = valStart;
-                    while (valEnd < itemObj.Length && (char.IsDigit(itemObj[valEnd]) || itemObj[valEnd] == '-')) valEnd++;
-                    if (valEnd > valStart && long.TryParse(itemObj.Substring(valStart, valEnd - valStart), out long itemId))
-                    {
-                        if (BrutalAPMod.itemIdToName.TryGetValue(itemId, out string itemName))
-                        {
-                            Debug.Log($"AP: Parsed item from ReceivedItems: {itemName} (ID {itemId})");
-                            BrutalAPMod.OnItemReceived(itemName);
-                        }
-                        else
-                            Debug.Log($"AP: Unknown item ID {itemId}");
-                    }
-                }
-                pos = objEnd + 1;
+                pos = numEnd;
             }
         }
 
@@ -178,6 +160,7 @@ namespace BrutalOrchestraAr
             if (BrutalAPMod.locationIDs.TryGetValue(locationName, out long id))
             {
                 string json = $"[{{\"cmd\":\"LocationChecks\",\"locations\":[{id}]}}]";
+                Debug.Log($"AP: Sending check JSON: {json}");
                 var bytes = Encoding.UTF8.GetBytes(json);
                 await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
                 Debug.Log($"AP: Sent check {locationName} ({id})");
