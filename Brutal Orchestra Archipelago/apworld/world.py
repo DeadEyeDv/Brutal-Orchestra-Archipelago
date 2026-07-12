@@ -411,20 +411,34 @@ class BrutalOrchestraWorld(World):
 
         for name in self.hero_names:
             self.active_locations.add(self.hero_check_names[name])
+
+        # ID квестовых предметов Bronzo/Director/Mordrake — исключаем их из
+        # безусловного добавления ниже, чтобы локация появлялась только
+        # когда соответствующий квест реально включён в опциях.
+        bronzo_uids = {"Bronzo1", "Bronzo2", "BronzoBossPhase1", "Bronzo3", "BronzoBossPhase2",
+                       "Bronzo4", "BronzoBossPhase3", "Bronzo5", "BronzoBossPhase4",
+                       "Bronzo6", "BronzoBoss"}
+        director_uids = {"VHSTask0", "VHSTask1", "VHSTask2", "VHSTask3",
+                          "VHSTask4", "VHSTask5", "VHSTask6"}
+        mordrake_uids = {"Mordrake1", "Mordrake2", "Mordrake3",
+                          "Mordrake4", "Mordrake5", "Mordrake6"}
+        quest_uids = bronzo_uids | director_uids | mordrake_uids
+
         for uid in self.item_unlock_ids:
+            if uid in quest_uids:
+                continue
             cname = self.item_check_names.get(uid, f"Item_{uid}")
             self.active_locations.add(cname)
 
         # Optional quests
         if self.bronzo_quest:
-            for uid in ["Bronzo1","Bronzo2","BronzoBossPhase1","Bronzo3","BronzoBossPhase2",
-                        "Bronzo4","BronzoBossPhase3","Bronzo5","BronzoBossPhase4","Bronzo6","BronzoBoss"]:
+            for uid in bronzo_uids:
                 self.active_locations.add(self.item_check_names[uid])
         if self.director_quest:
-            for uid in ["VHSTask0","VHSTask1","VHSTask2","VHSTask3","VHSTask4","VHSTask5","VHSTask6"]:
+            for uid in director_uids:
                 self.active_locations.add(self.item_check_names[uid])
         if self.mordrake_quest:
-            for uid in ["Mordrake1","Mordrake2","Mordrake3","Mordrake4","Mordrake5","Mordrake6"]:
+            for uid in mordrake_uids:
                 self.active_locations.add(self.item_check_names[uid])
 
         self.active_locations.add("Quarry_Boss_Spared")
@@ -445,6 +459,9 @@ class BrutalOrchestraWorld(World):
         # Victory locations (always numbered)
         for i in range(1, self.win_count + 1):
             self.active_locations.add(f"Garden Boss Defeat {i}" if self.hardmode else f"Quarry Boss Defeat {i}")
+
+                # в конце generate_early, после всех self.active_locations.add(...)
+        print(f"[BruOrch DEBUG] active_locations count: {len(self.active_locations)}")
 
     def fill_slot_data(self):
         data = {
@@ -532,6 +549,8 @@ class BrutalOrchestraWorld(World):
         skip_if_director_off = {"Broken Doll", "Infernal Eye", "Vyacheslav's Last Sip", "Wailing Whistle",
                                "Cursed Sword", "Enigma", "The Master's Sickle", "Esoteric Artifact"}
         skip_if_mordrake_off = {"Mordrake's Untold Tale"}
+
+        created_items = []
         for name in self.item_names:
             if (not self.bronzo_quest and name in skip_if_bronzo_off) or \
                (not self.director_quest and name in skip_if_director_off) or \
@@ -539,15 +558,21 @@ class BrutalOrchestraWorld(World):
                 continue
             item = Item(name, ItemClassification.progression if name not in ("5 Coins", "10 Coins", "15 Coins") else ItemClassification.filler,
                        self.item_name_to_id[name], self.player)
-            self.multiworld.itempool.append(item)
+            created_items.append(item)
 
+        # total_active включает "победные" локации (Quarry/Garden Boss Defeat N),
+        # которые заполняются не из пула, а через place_locked_item ниже —
+        # поэтому их нужно вычесть при подсчёте нужного количества филлеров.
         total_active = len(self.active_locations)
-        needed = total_active - len(self.multiworld.itempool)
+        needed = total_active - self.win_count - len(created_items)
+
         for i in range(needed):
             name = "5 Coins" if i % 2 == 0 else "10 Coins"
             item = Item(name, ItemClassification.filler,
                        self.item_name_to_id[name], self.player)
-            self.multiworld.itempool.append(item)
+            created_items.append(item)
+
+        self.multiworld.itempool += created_items
 
         # Place victory items
         for i in range(1, self.win_count + 1):
@@ -555,6 +580,10 @@ class BrutalOrchestraWorld(World):
             self.multiworld.get_location(loc_name, self.player).place_locked_item(
                 Item("Garden Boss Defeat" if self.hardmode else "Quarry Boss Defeat", ItemClassification.progression, None, self.player)
             )
+
+        print(f"[BruOrch DEBUG] itempool count for this player: {len(created_items)}")
+        print(f"[BruOrch DEBUG] total_active: {total_active}, win_count: {self.win_count}, needed: {needed}")
+        
 
     def set_rules(self):
         self.multiworld.get_entrance("Far Shore -> Orpheum", self.player).access_rule = \
