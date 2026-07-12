@@ -2,7 +2,8 @@ from worlds.AutoWorld import World
 from BaseClasses import Item, ItemClassification, Location, Region
 from .options import BrutalOrchestraOptions, FarBattleCount, OrpBattleCount, \
     FarMoneyChests, OrpMoneyChests, FarArtifactChests, OrpArtifactChests, \
-    FarShopCount, OrpShopCount, BossCount
+    FarShopCount, OrpShopCount, BossCount, GardenBattleCount, GardenMoneyChests, \
+    GardenArtifactChests, GardenShopCount
 
 class BrutalOrchestraWorld(World):
     game = "Brutal Orchestra"
@@ -11,8 +12,9 @@ class BrutalOrchestraWorld(World):
     options: BrutalOrchestraOptions
 
     item_names = [
-        "Orpheum Access", "Sepulchre Access",
+        "Orpheum Access", "Quarry Access",
         "Boss 1", "Boss 2", "Boss 3",
+        # Standard items (paints removed)
         "Anemone Thread", "Beads of Something or Other", "Blood Thirsty Idol",
         "Boonario", "Bosch's Fist", "Clash of the Bleached", "Crown of Thorns",
         "Dew-Covered Sticker", "Diseased Bodypart", "Dried Paintbrush",
@@ -26,224 +28,551 @@ class BrutalOrchestraWorld(World):
         "Shattered Amulet", "Silk Tourniquet", "Soul Contract", "Stimpak",
         "Strange Beads", "The Unfinished Bolt", "Thick Gloves",
         "Thorned Vines", "Tumor",
-        "Black Paint", "Blue Paint", "Brown Paint", "Cyan Paint",
-        "Gray Paint", "Green Paint", "Lime Paint", "Magenta Paint",
-        "Orange Paint", "Pink Paint", "Purple Paint", "Red Paint",
-        "Teal Paint", "White Paint", "Yellow Paint",
         "5 Coins", "10 Coins", "15 Coins",
+        "Hardmode Access",
+        # Victory items
+        "Quarry Boss Defeat", "Garden Boss Defeat",
+        # Unlock items (AP progression items that directly unlock game content)
+        "Rib of Eve", "Immolated Fairy", "Skinned Skate", "Strange Fruit",
+        "Unfortunate Prophecy", "Can o' Worms", "Box of Medals", "Wicker Child",
+        "Lady Gloves", "Convergent Rage", "The Ideal Form of Trash", "Lust Pudding",
+        "Someone Else's Face", "Counterfeit Medal", "Consolation Prize",
+        "Egg of Firmament", "Ascetic Egg", "Indulgence", "The First Born",
+        "Dried Paint", "Lil Orro", "Chain of Command", "Gump Ming Goa",
+        "Ed's Tags", "Tape Worm Pills", "Shard of Nowak", "All that is Mortal",
+        "Brigade of Dis", "The Brand", "The Human Soul", "Idea of Evil",
+        "Mini Mordrake", "Mung? Unlock", "Fog's Prescience (NPC)",
+        "Conscription Notice", "Ichthys", "Bloating Coffers", "Serpent's Head",
+        "Caretaker's Cudgel", "Howling Log", "Tondal's Vision", "Peg Leg",
+        "Demon Core", "Harvest and Plenty", "Blood Breathing Bomb",
+        "Man Made Ovum", "Hereafter", "Ol Reliable", "The Rest of Nowak",
+        "Stillborn Egg", "Arachnid Aphrodisiac",
+        "Baltic Brine", "Dum-Dum", "Expired Medicine", "Forgotten Pump",
+        "Gentlemen's Glove", "Littering Leaflets", "Soap?",
+        "Homeless Hotline", "Lil Smiley", "Pharmaceutical Roller Coaster",
+        "Used Dog Tags", "War Bond", "Professional Procrastinator", "Vowbreaker",
+        "Sacrificial Saint", "Starving Apples", "Gift Box!", "Defective Rounds",
+        "Another Dud", "Purple Heart", "Rorscach Test", "Roentgen Rays",
+        "Health insurance", "A Gift?", "Rotund Amphibian", "Gamified Cephalopod",
+        "You Can Do It!", "Russki Vampire", "Extra Stitching", "Pain Killers",
+        "Lycanthrope's Core", "Head of Scrybe", "Fishing Rod",
+        "Effigy of the Mettle Mother", "Gilded Mirror", "Spiked Collar",
+        "The Cougar", "Someone Else's Wedding Ring", "Fist Full of Ash",
+        "Czech Hedgehog", "Cremation", "Deworming Pills", "Medical Leches",
+        "Holy Chalice", "Seeds of the Consumed", "The Jersey",
+        "Pontiff's Parade", "Mystery Ration", "Ol' Stumpy", "Iron Necklace",
+        "The Apple", "Trepanation", "Wheel of Fortune", "Prussian Blue", "DDT",
+        "Blind Faith", "Modern Medicine", "Divine Mud", "Opulent Egg",
+        "Cloth Cock", "Sculptur's Tools", "Gospel's Severed Head",
+        "Wels Catfish", "Left Shoe", "Meatre Worm", "Norris!",
+        "Burn-Bottle Batch", "Royal Pine", "Coelacanth", "Sacred Shrub",
+        "Mordrake", "Faulty Land Mine",
+        # Bronzo quest items (optional)
+        "Bronzo's 2 Cents (Item)", "Counterfeit coins", "Bananas", "Bronzo's Stupid Hat",
+        # Director's Cut (VHS) items (optional)
+        "Broken Doll", "Infernal Eye", "Vyacheslav's Last Sip", "Wailing Whistle",
+        "Cursed Sword", "Enigma", "The Master's Sickle", "Esoteric Artifact",
+        # Mordrake's Untold Tale items (optional)
+        "Mordrake's Untold Tale",
+        # Combined bundles
+        "Winstreak 2 Bundle", "Winstreak 3 Bundle", "Winstreak 4 Bundle", "Winstreak 5 Bundle",
+        "HundredPercent Bundle"
     ]
 
     item_name_to_id = {name: 10000 + i for i, name in enumerate(item_names)}
 
-    hero_names = ["Boyle","Hans","Anton","Splig","Pearl","Thype","Griffin","Arnold","Dimitri",
+    # All heroes except starters Boyle and Hans
+    hero_names = ["Anton","Splig","Pearl","Thype","Griffin","Arnold","Dimitri",
                   "LongLiver","Clive","Kleiver","Cranes","Agon","Rags","SmokeStacks","Leviat",
                   "Gospel","Bimini","Burnout","Fennec","Mordrake","Mung","ShellyK","Formosus"]
 
+    # Unlockable IDs that correspond to achievements
     item_unlock_ids = [
-        "Ending_CorpseKill","Ending_CorpseSave","ShopDepleted","FoolsDepleted",
-        "HeavenDoubleSacrifice","RoidsMissTurn","OrroSmooch","SurviveStarvation",
+        "Roids","Hickory","Mobius","TheOuroboros","Smoothskin",
+        "FarShore","Orpheum","ZoneExplorer","BossSlap","RoidsMissTurn",
+        "SmoothskinTrauma","DontAct","FoolsDepleted","ShopDepleted",
+        "Ending_GameOver","LoseToBoss","ManaCostDeath","OverflowDeath",
+        "OrroSmooch","Ending_CorpseKill","SurviveStarvation",
+        "Over100Coins","OneTurnHardKill","FriendlyFireDeath","ParasiteJourney",
+        "Ending_CorpseSave",
+        # Hardmode
+        "Ending_HardMode",
+        "TriggerFingers","Charcarrion","OsmanSinnoks","Heaven",
+        "AllBosses","Ichor1","Ichor2","Ichor3","Ichor4",
+        "Fogs1","Fogs2","Fogs3","UngodEmissary",
+        "Garden","FarShoreNoCasualtiesHard","OrpheumNoCasualtiesHard",
+        "GardenNoCasualtiesHard","AllZonesNoCasualtiesHard","WorldExplorer",
+        "AllBossesSlap","BasicSpeedrun","UngodKill","SepulchreKill",
+        "XiphactinusKill","UnfinishedHeirKill","CharcarrionDecomposition",
+        "NoNowakHardEnd","NowakLoneSurvivor","HeavenDoubleSacrifice",
+        "CasualtiesCharacter5","CasualtiesEnemy30","HeadshotDeath",
+        "DamageDealt100","AntonSad",
+        # Character-specific
+        "Boyle_Osman","Boyle_Heaven",
+        "Hans_Osman","Hans_Heaven",
+        "Burnout_Osman","Burnout_Heaven",
+        "Fennec_Osman","Fennec_Heaven",
+        "Anton_Osman","Anton_Heaven",
+        "Splig_Osman","Splig_Heaven",
+        "Pearl_Osman","Pearl_Heaven",
+        "Thype_Osman","Thype_Heaven",
+        "Griffin_Osman","Griffin_Heaven",
+        "Arnold_Osman","Arnold_Heaven",
+        "Dimitri_Osman","Dimitri_Heaven",
+        "LongLiver_Osman","LongLiver_Heaven",
+        "Clive_Osman","Clive_Heaven",
+        "Kleiver_Osman","Kleiver_Heaven",
+        "Cranes_Osman","Cranes_Heaven",
+        "Agon_Osman","Agon_Heaven",
+        "Rags_Osman","Rags_Heaven",
+        "SmokeStacks_Osman","SmokeStacks_Heaven",
+        "Leviat_Osman","Leviat_Heaven",
+        "Gospel_Osman","Gospel_Heaven",
+        "Bimini_Osman","Bimini_Heaven",
+        "Mung_Osman","Mung_Heaven",
+        "Mordrake_Osman","Mordrake_Heaven",
+        "ShellyK_Osman","ShellyK_Heaven",
+        "Formosus_Osman","Formosus_Heaven",
+        "ProdigalFlee",
+        "MordrakeCH",
+        # Bronzo (optional)
+        "Bronzo1","Bronzo2","BronzoBossPhase1","Bronzo3","BronzoBossPhase2",
+        "Bronzo4","BronzoBossPhase3","Bronzo5","BronzoBossPhase4",
+        "Bronzo6","BronzoBoss",
+        # Mordrake (optional)
+        "Mordrake1","Mordrake2","Mordrake3","Mordrake4","Mordrake5","Mordrake6",
+        # Director's Cut (optional)
         "VHSTask0","VHSTask1","VHSTask2","VHSTask3","VHSTask4","VHSTask5","VHSTask6",
-        "HundredPercent","UngodEmissary","AntonSad","ProdigalFlee"
+        # Winstreaks / HundredPercent
+        "Winstreak2","Winstreak3","Winstreak4","Winstreak5",
+        "HundredPercent"
     ]
 
-    # Статический словарь со всеми возможными локациями (максимальные значения опций)
+    hero_check_names = {
+        "Anton": "The Gambler", "Splig": "The Conjoined", "Pearl": "The Glutton",
+        "Thype": "The Trickster", "Griffin": "The Naked", "Arnold": "The Failure",
+        "Dimitri": "The Incinerated", "LongLiver": "The Parasite", "Clive": "The Stoic",
+        "Kleiver": "The Zealot", "Cranes": "The Corpse", "Agon": "The Terminal",
+        "Rags": "The Psychic", "SmokeStacks": "The Black Lung", "Leviat": "The Mass",
+        "Gospel": "The Magnum Opus", "Bimini": "The Immortal", "Burnout": "The Sadist",
+        "Fennec": "The Impaled", "Mordrake": "The Mistake", "Mung": "The Emotional Disaster",
+        "ShellyK": "The Cougar", "Formosus": "The Exhumed"
+    }
+
+    item_check_names = {
+        "Roids": "The Juggernaut",
+        "Hickory": "The Fire and Flames",
+        "Mobius": "The Widower",
+        "TheOuroboros": "The Leviathan",
+        "Smoothskin": "The Orphan",
+        "FarShore": "Beyond the Dunes",
+        "Orpheum": "Above the Mountains",
+        "ZoneExplorer": "Thorough Explorer",
+        "BossSlap": "Throw Hands",
+        "RoidsMissTurn": "Heavyweight Champion",
+        "SmoothskinTrauma": "Emotional and Physical Annihilation",
+        "DontAct": "Nary a Finger Lifted",
+        "FoolsDepleted": "Human Resources",
+        "ShopDepleted": "Deep Pockets",
+        "Ending_GameOver": "It Happens to the Best of Us",
+        "LoseToBoss": "Honest Effort",
+        "ManaCostDeath": "Tactical Miscalculation",
+        "OverflowDeath": "Drowning in Pigment",
+        "OrroSmooch": "Smooch!",
+        "Ending_CorpseKill": "The End?",
+        "SurviveStarvation": "Swallowed by the Sea",
+        "Over100Coins": "Capital is King",
+        "OneTurnHardKill": "Brutality",
+        "FriendlyFireDeath": "What are You Doing?",
+        "ParasiteJourney": "So Long Liver",
+        "Ending_CorpseSave": "I'll Make You Regret This",
+        "Ending_HardMode": "All that is Mortal",
+        "TriggerFingers": "The Coward",
+        "Charcarrion": "The Messiah",
+        "OsmanSinnoks": "The Witness",
+        "Heaven": "The Divine",
+        "AllBosses": "Kingslayer",
+        "Ichor1": "Ichor's Last Wish", "Ichor2": "Ichor's Last Wish", "Ichor3": "Ichor's Last Wish", "Ichor4": "Ichor's Last Wish",
+        "Fogs1": "Fog's Prescience", "Fogs2": "Fog's Prescience", "Fogs3": "Fog's Prescience",
+        "UngodEmissary": "The Ungod's Demand",
+        "Garden": "Within Yourself",
+        "FarShoreNoCasualtiesHard": "Duke of the Dunes",
+        "OrpheumNoCasualtiesHard": "Master of the Mountains",
+        "GardenNoCasualtiesHard": "Garden of Earthly Delights",
+        "AllZonesNoCasualtiesHard": "The Work of an Artists",
+        "WorldExplorer": "Every Stone Tuned",
+        "AllBossesSlap": "God of Phalanges, Palms and Pain",
+        "BasicSpeedrun": "Decisive and Concise",
+        "UngodKill": "God is Dead and We Have Killed Him",
+        "SepulchreKill": "Somebody Call the Vatican",
+        "XiphactinusKill": "Bit off More Than You Can Chew",
+        "UnfinishedHeirKill": "Bloodline Drinker",
+        "CharcarrionDecomposition": "Crisis of Faith",
+        "NoNowakHardEnd": "Plot Armor",
+        "NowakLoneSurvivor": "Worthy Successor",
+        "HeavenDoubleSacrifice": "The Second Coming",
+        "CasualtiesCharacter5": "Month of Funerals",
+        "CasualtiesEnemy30": "Mass Grave Matters",
+        "HeadshotDeath": "Boom, Headshot",
+        "DamageDealt100": "War Criminal",
+        "AntonSad": "Plenty of Fish in the Desert",
+        # Character-specific
+        "Boyle_Osman": "Another Dud",
+        "Boyle_Heaven": "Purple Heart",
+        "Hans_Osman": "Rorscach Test",
+        "Hans_Heaven": "Roentgen Rays",
+        "Burnout_Osman": "Health Insurance",
+        "Burnout_Heaven": "A Gift?",
+        "Fennec_Osman": "Rotund Amphibian",
+        "Fennec_Heaven": "Gamified Cephalopod",
+        "Anton_Osman": "You Can Do It!",
+        "Anton_Heaven": "Russki Vampire",
+        "Splig_Osman": "Extra Stitching",
+        "Splig_Heaven": "Pain Killers",
+        "Pearl_Osman": "Lycanthrope's Core",
+        "Pearl_Heaven": "Head of Scrybe",
+        "Thype_Osman": "Fishing Rod",
+        "Thype_Heaven": "Effigy of the Mettle Mother",
+        "Griffin_Osman": "Gilded Mirror",
+        "Griffin_Heaven": "Spiked Collar",
+        "Arnold_Osman": "Someone Else's Wedding Ring",
+        "Arnold_Heaven": "Fist Full of Ash",
+        "Dimitri_Osman": "Czech Hedgehog",
+        "Dimitri_Heaven": "Cremation",
+        "LongLiver_Osman": "Deworming Pills",
+        "LongLiver_Heaven": "Medical Leches",
+        "Clive_Osman": "Holy Chalice",
+        "Clive_Heaven": "Seeds of the Consumed",
+        "Kleiver_Osman": "The Jersey",
+        "Kleiver_Heaven": "Pontiff's Parade",
+        "Cranes_Osman": "Mystery Ration",
+        "Cranes_Heaven": "Ol' Stumpy",
+        "Agon_Osman": "Iron Necklace",
+        "Agon_Heaven": "The Apple",
+        "Rags_Osman": "Trepanation",
+        "Rags_Heaven": "Wheel of Fortune",
+        "SmokeStacks_Osman": "Prussian Blue",
+        "SmokeStacks_Heaven": "DDT",
+        "Leviat_Osman": "Blind Faith",
+        "Leviat_Heaven": "Modern Medicine",
+        "Bimini_Osman": "Divine Mud",
+        "Bimini_Heaven": "Opulent Egg",
+        "Gospel_Osman": "Sculptur's Tools",
+        "Gospel_Heaven": "Gospel's Severed Head",
+        "Mung_Osman": "Wels Catfish",
+        "Mung_Heaven": "Left Shoe",
+        "Mordrake_Osman": "Meatre Worm",
+        "Mordrake_Heaven": "Norris!",
+        "ShellyK_Osman": "Burn-Bottle Batch",
+        "ShellyK_Heaven": "Royal Pine",
+        "Formosus_Osman": "Coelacanth",
+        "Formosus_Heaven": "Sacred Shrub",
+        "ProdigalFlee": "Fear of Gods Above",
+        "MordrakeCH": "The Mistake",
+        # Bronzo
+        "Bronzo1": "Bronzo's 2 Cents",
+        "Bronzo2": "What the !@#$ Nowak?",
+        "BronzoBossPhase1": "What the !@#$ Nowak?",
+        "Bronzo3": "Okay Nowak, Seriously Stop!",
+        "BronzoBossPhase2": "Okay Nowak, Seriously Stop!",
+        "Bronzo4": "That's it Nowak!",
+        "BronzoBossPhase3": "That's it Nowak!",
+        "Bronzo5": "Time to Die!",
+        "BronzoBossPhase4": "Time to Die!",
+        "Bronzo6": "The Shyster",
+        "BronzoBoss": "The Shyster",
+        # Mordrake
+        "Mordrake1": "Mordrake's Untold Tale",
+        "Mordrake2": "Mordrake's Untold Tale",
+        "Mordrake3": "Mordrake's Untold Tale",
+        "Mordrake4": "Mordrake's Untold Tale",
+        "Mordrake5": "Mordrake's Untold Tale",
+        "Mordrake6": "Mordrake's Untold Tale",
+        # Director's Cut
+        "VHSTask0": "The Director's Final Frame",
+        "VHSTask1": "The Director's Final Frame",
+        "VHSTask2": "The Director's Final Frame",
+        "VHSTask3": "The Director's Final Frame",
+        "VHSTask4": "The Director's Final Frame",
+        "VHSTask5": "The Director's Final Frame",
+        "VHSTask6": "The Director's Final Frame",
+        # Winstreaks
+        "Winstreak2": "Dumb Luck",
+        "Winstreak3": "Notable Skill",
+        "Winstreak4": "Burgeoning Expertise",
+        "Winstreak5": "Total and Absolute Mastery",
+        "HundredPercent": "Brutal Orchestra"
+    }
+
     location_name_to_id = {
         "Far Shore Access": 100,
         "Orpheum Access": 101,
-        "Sepulchre Access": 102,
-        "BuyHero_1": 103,
-        "BuyHero_2": 104,
-        "BuyHero_3": 105,
-        "BuyHero_4": 106
+        "Quarry Access": 102,
+        "BuyHero_1": 103, "BuyHero_2": 104, "BuyHero_3": 105, "BuyHero_4": 106
     }
 
-    # Far Battles
-    fid = 200
     for i in range(1, FarBattleCount.range_end + 1):
-        location_name_to_id[f"Far_Battle_{i}"] = fid
-        fid += 1
-
-    # Orp Battles
-    oid = 300
+        location_name_to_id[f"Far_Battle_{i}"] = 200 + i - 1
     for i in range(1, OrpBattleCount.range_end + 1):
-        location_name_to_id[f"Orp_Battle_{i}"] = oid
-        oid += 1
-
-    # Far Money Chests
-    fmid = 400
+        location_name_to_id[f"Orp_Battle_{i}"] = 300 + i - 1
     for i in range(1, FarMoneyChests.range_end + 1):
-        location_name_to_id[f"Far_MoneyChest_{i}"] = fmid
-        fmid += 1
-
-    # Orp Money Chests
-    omid = 500
+        location_name_to_id[f"Far_MoneyChest_{i}"] = 400 + i - 1
     for i in range(1, OrpMoneyChests.range_end + 1):
-        location_name_to_id[f"Orp_MoneyChest_{i}"] = omid
-        omid += 1
-
-    # Far Artifact Chests
-    faid = 600
+        location_name_to_id[f"Orp_MoneyChest_{i}"] = 500 + i - 1
     for i in range(1, FarArtifactChests.range_end + 1):
-        location_name_to_id[f"Far_ArtifactChest_{i}"] = faid
-        faid += 1
-
-    # Orp Artifact Chests
-    oaid = 700
+        location_name_to_id[f"Far_ArtifactChest_{i}"] = 600 + i - 1
     for i in range(1, OrpArtifactChests.range_end + 1):
-        location_name_to_id[f"Orp_ArtifactChest_{i}"] = oaid
-        oaid += 1
+        location_name_to_id[f"Orp_ArtifactChest_{i}"] = 700 + i - 1
 
-    # Bosses
-    bid = 800
-    location_name_to_id["Far Boss"] = bid
-    bid += 1
-    location_name_to_id["Orp Boss"] = bid
-    bid += 1
-    location_name_to_id["Sepulchre Boss"] = bid
-    bid += 1
+    location_name_to_id["Far Boss"] = 800
+    location_name_to_id["Orp Boss"] = 801
+    location_name_to_id["Quarry Boss"] = 802
 
-    # Far Shops
-    fsid = 900
     for i in range(1, FarShopCount.range_end + 1):
-        location_name_to_id[f"Shop_Far_{i}"] = fsid
-        fsid += 1
-
-    # Orp Shops
-    osid = 1000
+        location_name_to_id[f"Shop_Far_{i}"] = 900 + i - 1
     for i in range(1, OrpShopCount.range_end + 1):
-        location_name_to_id[f"Shop_Orp_{i}"] = osid
-        osid += 1
+        location_name_to_id[f"Shop_Orp_{i}"] = 1000 + i - 1
 
-    # Heroes
-    hid = 1100
-    for name in hero_names:
-        location_name_to_id[f"Hero_{name}"] = hid
-        hid += 1
+    for i, name in enumerate(hero_names):
+        location_name_to_id[hero_check_names[name]] = 1100 + i
 
-    # Item Unlocks
-    iid = 1200
+    used_check_names = set()
+    next_item_id = 1300
     for uid in item_unlock_ids:
-        location_name_to_id[f"Item_{uid}"] = iid
-        iid += 1
+        cname = item_check_names.get(uid, f"Item_{uid}")
+        if cname not in used_check_names:
+            location_name_to_id[cname] = next_item_id
+            next_item_id += 1
+            used_check_names.add(cname)
+
+    location_name_to_id["Quarry_Boss_Spared"] = 2700
+    location_name_to_id["Mordrake's Untold Tale"] = 2800
+    location_name_to_id["The Director's Final Frame"] = 2900
+
+    for i in range(1, GardenBattleCount.range_end + 1):
+        location_name_to_id[f"Garden_Battle_{i}"] = 3000 + i - 1
+    for i in range(1, GardenMoneyChests.range_end + 1):
+        location_name_to_id[f"Garden_MoneyChest_{i}"] = 3100 + i - 1
+    for i in range(1, GardenArtifactChests.range_end + 1):
+        location_name_to_id[f"Garden_ArtifactChest_{i}"] = 3200 + i - 1
+    for i in range(1, GardenShopCount.range_end + 1):
+        location_name_to_id[f"Garden_Shop_{i}"] = 3300 + i - 1
+    location_name_to_id["Garden Boss"] = 3400
+
+    # Victory locations (numbered, up to 10)
+    for i in range(1, 11):
+        location_name_to_id[f"Quarry Boss Defeat {i}"] = 4000 + i
+    for i in range(1, 11):
+        location_name_to_id[f"Garden Boss Defeat {i}"] = 4100 + i
 
     def generate_early(self):
-        # Запоминаем, какие локации реально используются (на основе опций)
+        self.far_battle_count = self.options.far_battle_count.value
+        self.orp_battle_count = self.options.orp_battle_count.value
+        self.far_money_chests = self.options.far_money_chests.value
+        self.orp_money_chests = self.options.orp_money_chests.value
+        self.far_artifact_chests = self.options.far_artifact_chests.value
+        self.orp_artifact_chests = self.options.orp_artifact_chests.value
+        self.shop_count_far = self.options.far_shop_count.value
+        self.shop_count_orp = self.options.orp_shop_count.value
+        self.boss_count = self.options.boss_count.value
+        self.hardmode = self.options.hardmode.value
+        self.bronzo_quest = self.options.bronzo_quest.value
+        self.director_quest = self.options.director_quest.value
+        self.mordrake_quest = self.options.mordrake_quest.value
+        self.win_count = self.options.win_count.value
+
         self.active_locations = set()
-        # Базовые всегда
         self.active_locations.update([
-            "Far Shore Access", "Orpheum Access", "Sepulchre Access",
+            "Far Shore Access", "Orpheum Access", "Quarry Access",
             "BuyHero_1", "BuyHero_2", "BuyHero_3", "BuyHero_4"
         ])
-        # Добавляем выбранные опциями локации
-        for i in range(1, self.options.far_battle_count.value + 1):
+        for i in range(1, self.far_battle_count + 1):
             self.active_locations.add(f"Far_Battle_{i}")
-        for i in range(1, self.options.orp_battle_count.value + 1):
+        for i in range(1, self.orp_battle_count + 1):
             self.active_locations.add(f"Orp_Battle_{i}")
-        for i in range(1, self.options.far_money_chests.value + 1):
+        for i in range(1, self.far_money_chests + 1):
             self.active_locations.add(f"Far_MoneyChest_{i}")
-        for i in range(1, self.options.orp_money_chests.value + 1):
+        for i in range(1, self.orp_money_chests + 1):
             self.active_locations.add(f"Orp_MoneyChest_{i}")
-        for i in range(1, self.options.far_artifact_chests.value + 1):
+        for i in range(1, self.far_artifact_chests + 1):
             self.active_locations.add(f"Far_ArtifactChest_{i}")
-        for i in range(1, self.options.orp_artifact_chests.value + 1):
+        for i in range(1, self.orp_artifact_chests + 1):
             self.active_locations.add(f"Orp_ArtifactChest_{i}")
-        for i in range(1, self.options.far_shop_count.value + 1):
+        for i in range(1, self.shop_count_far + 1):
             self.active_locations.add(f"Shop_Far_{i}")
-        for i in range(1, self.options.orp_shop_count.value + 1):
+        for i in range(1, self.shop_count_orp + 1):
             self.active_locations.add(f"Shop_Orp_{i}")
-        if self.options.boss_count.value >= 1:
+        if self.boss_count >= 1:
             self.active_locations.add("Far Boss")
-        if self.options.boss_count.value >= 2:
+        if self.boss_count >= 2:
             self.active_locations.add("Orp Boss")
-        if self.options.boss_count.value >= 3:
-            self.active_locations.add("Sepulchre Boss")
+        if self.boss_count >= 3:
+            self.active_locations.add("Quarry Boss")
+
         for name in self.hero_names:
-            self.active_locations.add(f"Hero_{name}")
+            self.active_locations.add(self.hero_check_names[name])
         for uid in self.item_unlock_ids:
-            self.active_locations.add(f"Item_{uid}")
+            cname = self.item_check_names.get(uid, f"Item_{uid}")
+            self.active_locations.add(cname)
+
+        # Optional quests
+        if self.bronzo_quest:
+            for uid in ["Bronzo1","Bronzo2","BronzoBossPhase1","Bronzo3","BronzoBossPhase2",
+                        "Bronzo4","BronzoBossPhase3","Bronzo5","BronzoBossPhase4","Bronzo6","BronzoBoss"]:
+                self.active_locations.add(self.item_check_names[uid])
+        if self.director_quest:
+            for uid in ["VHSTask0","VHSTask1","VHSTask2","VHSTask3","VHSTask4","VHSTask5","VHSTask6"]:
+                self.active_locations.add(self.item_check_names[uid])
+        if self.mordrake_quest:
+            for uid in ["Mordrake1","Mordrake2","Mordrake3","Mordrake4","Mordrake5","Mordrake6"]:
+                self.active_locations.add(self.item_check_names[uid])
+
+        self.active_locations.add("Quarry_Boss_Spared")
+        self.active_locations.add("Mordrake's Untold Tale")
+        self.active_locations.add("The Director's Final Frame")
+
+        if self.hardmode:
+            for i in range(1, self.options.garden_battle_count.value + 1):
+                self.active_locations.add(f"Garden_Battle_{i}")
+            for i in range(1, self.options.garden_money_chests.value + 1):
+                self.active_locations.add(f"Garden_MoneyChest_{i}")
+            for i in range(1, self.options.garden_artifact_chests.value + 1):
+                self.active_locations.add(f"Garden_ArtifactChest_{i}")
+            for i in range(1, self.options.garden_shop_count.value + 1):
+                self.active_locations.add(f"Garden_Shop_{i}")
+            self.active_locations.add("Garden Boss")
+
+        # Victory locations (always numbered)
+        for i in range(1, self.win_count + 1):
+            self.active_locations.add(f"Garden Boss Defeat {i}" if self.hardmode else f"Quarry Boss Defeat {i}")
 
     def fill_slot_data(self):
-        return {
-            "far_battle_count": self.options.far_battle_count.value,
-            "orp_battle_count": self.options.orp_battle_count.value,
-            "far_money_chests": self.options.far_money_chests.value,
-            "orp_money_chests": self.options.orp_money_chests.value,
-            "far_artifact_chests": self.options.far_artifact_chests.value,
-            "orp_artifact_chests": self.options.orp_artifact_chests.value,
-            "shop_far": self.options.far_shop_count.value,
-            "shop_orp": self.options.orp_shop_count.value,
-            "boss_count": self.options.boss_count.value,
+        data = {
+            "far_battle_count": self.far_battle_count,
+            "orp_battle_count": self.orp_battle_count,
+            "far_money_chests": self.far_money_chests,
+            "orp_money_chests": self.orp_money_chests,
+            "far_artifact_chests": self.far_artifact_chests,
+            "orp_artifact_chests": self.orp_artifact_chests,
+            "shop_far": self.shop_count_far,
+            "shop_orp": self.shop_count_orp,
+            "boss_count": self.boss_count,
+            "hardmode": self.hardmode,
+            "bronzo_quest": self.bronzo_quest,
+            "director_quest": self.director_quest,
+            "mordrake_quest": self.mordrake_quest,
+            "win_count": self.win_count,
         }
+        if self.hardmode:
+            data.update({
+                "garden_battle_count": self.options.garden_battle_count.value,
+                "garden_money_chests": self.options.garden_money_chests.value,
+                "garden_artifact_chests": self.options.garden_artifact_chests.value,
+                "garden_shop_count": self.options.garden_shop_count.value,
+            })
+        return data
 
     def create_regions(self):
         menu = Region("Menu", self.player, self.multiworld)
         far = Region("Far Shore", self.player, self.multiworld)
         orp = Region("Orpheum", self.player, self.multiworld)
-        sep = Region("Sepulchre", self.player, self.multiworld)
+        quarry = Region("Quarry", self.player, self.multiworld)
+        garden = Region("Garden", self.player, self.multiworld)
         vic = Region("Victory", self.player, self.multiworld)
 
-        self.multiworld.regions += [menu, far, orp, sep, vic]
+        self.multiworld.regions += [menu, far, orp, quarry, garden, vic]
         menu.connect(far)
         far.connect(orp)
-        orp.connect(sep)
-        sep.connect(vic)
+        orp.connect(quarry)
+        quarry.connect(garden)
+        garden.connect(vic)
 
-        # Создаём локации только из активного набора
         far_prefixes = ("Far Shore Access", "Far_Battle", "Far_MoneyChest", "Far_ArtifactChest",
-                        "BuyHero_1", "BuyHero_2", "Shop_Far", "Far Boss",
-                        "Hero_", "Item_")
+                        "BuyHero_1", "BuyHero_2", "Shop_Far", "Far Boss")
         orp_prefixes = ("Orpheum Access", "Orp_Battle", "Orp_MoneyChest", "Orp_ArtifactChest",
                         "BuyHero_3", "BuyHero_4", "Shop_Orp", "Orp Boss")
-        sep_prefixes = ("Sepulchre Access", "Sepulchre Boss")
+        quarry_prefixes = ("Quarry Access", "Quarry Boss")
+        garden_prefixes = ("Garden_Battle", "Garden_MoneyChest", "Garden_ArtifactChest",
+                           "Garden_Shop", "Garden Boss", "Quarry_Boss_Spared")
 
+        far_heroes = [self.hero_check_names[n] for n in ["Anton","Splig","Pearl","Thype","Burnout","Fennec"]]
+        if self.hardmode:
+            far_heroes += [self.hero_check_names[n] for n in ["Griffin","Arnold","Dimitri"]]
+        orp_heroes = [self.hero_check_names[n] for n in ["LongLiver","Clive","Kleiver","Cranes","Agon"]]
+        garden_heroes = [self.hero_check_names[n] for n in ["SmokeStacks","Leviat","Bimini","Mordrake","ShellyK","Formosus","Gospel","Mung"]]
+
+        victory_prefixes = ("Quarry Boss Defeat", "Garden Boss Defeat")
         for name in self.active_locations:
-            if name.startswith(far_prefixes):
-                region = far
-            elif name.startswith(orp_prefixes):
-                region = orp
-            elif name.startswith(sep_prefixes):
-                region = sep
-            else:
+            if name.startswith(victory_prefixes):
                 continue
-            # id берём из общего статического словаря
+            if name.startswith(far_prefixes) or name in far_heroes:
+                region = far
+            elif name.startswith(orp_prefixes) or name in orp_heroes:
+                region = orp
+            elif name.startswith(quarry_prefixes):
+                region = quarry
+            elif name.startswith(garden_prefixes) or name in garden_heroes:
+                region = garden
+            elif name == "Mordrake's Untold Tale" or name == "The Director's Final Frame":
+                region = garden
+            else:
+                region = far
             loc = Location(self.player, name, self.location_name_to_id[name], region)
             region.locations.append(loc)
 
-        # Sepulchre Boss Defeat
-        loc = Location(self.player, "Sepulchre Boss Defeat", None, sep)
-        sep.locations.append(loc)
+        # Create victory locations
+        for i in range(1, self.win_count + 1):
+            loc_name = f"Garden Boss Defeat {i}" if self.hardmode else f"Quarry Boss Defeat {i}"
+            region = garden if self.hardmode else quarry
+            loc = Location(self.player, loc_name, None, region)
+            region.locations.append(loc)
 
     def create_items(self):
-        # Предметы только из исходного списка (всегда одинаковые)
+        skip_if_bronzo_off = {"Bronzo's 2 Cents (Item)", "Counterfeit coins", "Bananas", "Bronzo's Stupid Hat"}
+        skip_if_director_off = {"Broken Doll", "Infernal Eye", "Vyacheslav's Last Sip", "Wailing Whistle",
+                               "Cursed Sword", "Enigma", "The Master's Sickle", "Esoteric Artifact"}
+        skip_if_mordrake_off = {"Mordrake's Untold Tale"}
         for name in self.item_names:
-            item = Item(name, ItemClassification.progression,
+            if (not self.bronzo_quest and name in skip_if_bronzo_off) or \
+               (not self.director_quest and name in skip_if_director_off) or \
+               (not self.mordrake_quest and name in skip_if_mordrake_off):
+                continue
+            item = Item(name, ItemClassification.progression if name not in ("5 Coins", "10 Coins", "15 Coins") else ItemClassification.filler,
                        self.item_name_to_id[name], self.player)
             self.multiworld.itempool.append(item)
 
         total_active = len(self.active_locations)
-        needed = total_active - len(self.item_names)
+        needed = total_active - len(self.multiworld.itempool)
         for i in range(needed):
             name = "5 Coins" if i % 2 == 0 else "10 Coins"
             item = Item(name, ItemClassification.filler,
                        self.item_name_to_id[name], self.player)
             self.multiworld.itempool.append(item)
 
-        self.multiworld.get_location("Sepulchre Boss Defeat", self.player).place_locked_item(
-            Item("Sepulchre Boss Defeat", ItemClassification.progression, None, self.player)
-        )
+        # Place victory items
+        for i in range(1, self.win_count + 1):
+            loc_name = f"Garden Boss Defeat {i}" if self.hardmode else f"Quarry Boss Defeat {i}"
+            self.multiworld.get_location(loc_name, self.player).place_locked_item(
+                Item("Garden Boss Defeat" if self.hardmode else "Quarry Boss Defeat", ItemClassification.progression, None, self.player)
+            )
 
     def set_rules(self):
         self.multiworld.get_entrance("Far Shore -> Orpheum", self.player).access_rule = \
             lambda state: state.has("Orpheum Access", self.player)
-        self.multiworld.get_entrance("Orpheum -> Sepulchre", self.player).access_rule = \
-            lambda state: state.has("Sepulchre Access", self.player)
+        self.multiworld.get_entrance("Orpheum -> Quarry", self.player).access_rule = \
+            lambda state: state.has("Quarry Access", self.player)
+        self.multiworld.get_entrance("Quarry -> Garden", self.player).access_rule = \
+            lambda state: state.has("Hardmode Access", self.player)
 
         if "Orp Boss" in self.active_locations:
             self.multiworld.get_location("Orp Boss", self.player).access_rule = \
                 lambda state: state.has("Boss 1", self.player)
-        if "Sepulchre Boss" in self.active_locations:
-            self.multiworld.get_location("Sepulchre Boss", self.player).access_rule = \
+        if "Quarry Boss" in self.active_locations:
+            self.multiworld.get_location("Quarry Boss", self.player).access_rule = \
                 lambda state: state.has("Boss 2", self.player)
+        if "Garden Boss" in self.active_locations:
+            self.multiworld.get_location("Garden Boss", self.player).access_rule = \
+                lambda state: state.has("Boss 3", self.player)
 
         self.multiworld.completion_condition[self.player] = \
-            lambda state: state.has("Sepulchre Boss Defeat", self.player)
+            lambda state: state.has("Garden Boss Defeat" if self.hardmode else "Quarry Boss Defeat", self.player, self.win_count)
