@@ -128,13 +128,27 @@ namespace BrutalOrchestraAr
 
         private void ParseReceivedItems(string json)
         {
+            // "index" — позиция первого предмета пакета в общей истории.
+            // 0 при коннекте = сервер переигрывает всю историю с начала.
+            long packetIndex = 0;
+            int idxPos = json.IndexOf("\"index\":");
+            if (idxPos != -1)
+            {
+                int numStart = idxPos + 8;
+                while (numStart < json.Length && !char.IsDigit(json[numStart])) numStart++;
+                int numEnd = numStart;
+                while (numEnd < json.Length && char.IsDigit(json[numEnd])) numEnd++;
+                if (numEnd > numStart) long.TryParse(json.Substring(numStart, numEnd - numStart), out packetIndex);
+            }
+
             int itemsIdx = json.IndexOf("\"items\":[");
             if (itemsIdx == -1) return;
             int start = json.IndexOf('[', itemsIdx);
             int end = json.IndexOf(']', start);
             if (start == -1 || end == -1) return;
             string itemsArray = json.Substring(start, end - start + 1);
-            // Простейший разбор: ищем все "item":число
+
+            long itemPos = packetIndex;
             int pos = 0;
             while ((pos = itemsArray.IndexOf("\"item\":", pos)) != -1)
             {
@@ -145,11 +159,21 @@ namespace BrutalOrchestraAr
                 while (numEnd < itemsArray.Length && char.IsDigit(itemsArray[numEnd])) numEnd++;
                 if (numEnd > numStart && long.TryParse(itemsArray.Substring(numStart, numEnd - numStart), out long itemId))
                 {
+                    // Предмет уже обрабатывался в прошлой сессии — переигрываем только разлоки, не монеты
+                    bool isReplay = itemPos < BrutalAPMod.processedItemIndex;
+
                     if (BrutalAPMod.itemIdToName.TryGetValue(itemId, out string itemName))
-                        BrutalAPMod.OnItemReceived(itemName);
+                        BrutalAPMod.OnItemReceived(itemName, isReplay);
                     else
                         Debug.LogWarning($"Unknown item ID: {itemId}");
+
+                    if (!isReplay)
+                    {
+                        BrutalAPMod.processedItemIndex = (int)(itemPos + 1);
+                        BrutalAPMod.SaveProcessedItemIndex();
+                    }
                 }
+                itemPos++;
                 pos = numEnd;
             }
         }
