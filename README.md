@@ -7,7 +7,7 @@ Archipelago randomizer integration for Brutal Orchestra.
 #	Mod (C# client)
 1. Download `BrutalOrchestraArchipelago.dll` from [Releases](https://github.com/DeadEyeDv/BrutalOrchestraArchipelago/releases).
 2. Place the DLL in `BepInEx/plugins/`.
-3. Run the game and connect to the server (Change ws to wss)
+3. Run the game and connect to the server
 
 	APWorld (generator)
 1. Download `brutal_orchestra.apworld` from [Releases](https://github.com/DeadEye_Dv/BrutalOrchestraArchipelago/releases).
