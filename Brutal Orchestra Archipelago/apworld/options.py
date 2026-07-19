@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 from Options import Range, Toggle, PerGameCommonOptions, OptionGroup
 
+class Deathlink(Toggle):
+    """WHen you die (whole party wipes), everyone dies. And vice versa"""
+    display_name = "Deathlink"
+
 class WinCount(Range):
     """Number of final boss victories required to complete the goal."""
     display_name = "Win Count"
@@ -119,8 +123,16 @@ class DirectorQuest(Toggle):
     display_name = "Director's Quest"
     default = False
 
+class StartMoneyCount(Range):
+    """Number of Progressive Start Money items in the pool. Each adds +10 starting coins."""
+    display_name = "Progressive Start Money items"
+    range_start = 0
+    range_end = 10
+    default = 3
+
 @dataclass
 class BrutalOrchestraOptions(PerGameCommonOptions):
+    death_link: Deathlink
     win_count: WinCount
     far_battle_count: FarBattleCount
     orp_battle_count: OrpBattleCount
@@ -139,6 +151,7 @@ class BrutalOrchestraOptions(PerGameCommonOptions):
     mordrake_quest: MordrakeQuest
     bronzo_quest: BronzoQuest
     director_quest: DirectorQuest
+    start_money_count: StartMoneyCount
 
 option_groups = [
     OptionGroup("Goal", [WinCount]),

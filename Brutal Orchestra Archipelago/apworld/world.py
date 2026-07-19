@@ -1,5 +1,5 @@
 from worlds.AutoWorld import World
-from BaseClasses import Item, ItemClassification, Location, Region
+from BaseClasses import Item, ItemClassification, Location, Region, LocationProgressType
 from .options import BrutalOrchestraOptions, FarBattleCount, OrpBattleCount, \
     FarMoneyChests, OrpMoneyChests, FarArtifactChests, OrpArtifactChests, \
     FarShopCount, OrpShopCount, BossCount, GardenBattleCount, GardenMoneyChests, \
@@ -82,7 +82,9 @@ class BrutalOrchestraWorld(World):
         "The Failure", "The Incinerated", "The Parasite", "The Stoic", "The Zealot",
         "The Corpse", "The Terminal", "The Psychic", "The Black Lung", "The Mass",
         "The Magnum Opus", "The Immortal", "The Sadist", "The Impaled", "The Mistake",
-        "The Emotional Disaster", "The Exhumed"
+        "The Emotional Disaster", "The Exhumed",
+        "Progressive Start Money",
+        "Human Canvas", "Egg of Incubus", "Exquisite Corpse"
     ]
 
     item_name_to_id = {name: 10000 + i for i, name in enumerate(item_names)}
@@ -391,119 +393,139 @@ class BrutalOrchestraWorld(World):
         "Mordrake's Untold Tale", "Brutal Orchestra", "The Director's Final Frame"
     }
     
-    ITEM_ACCESS_RULES = {
-        "The End?": {"items": ["Quarry Access"]},
-        "I'll Make You Regret This": {"items": ["Quarry Access"]},
+    LOCATION_ZONES = {
+        # Far Shore (без хардмода)
+        "The Gambler": "far", "The Conjoined": "far", "The Glutton": "far",
+        "The Sadist": "far", "The Impaled": "far",
+        "The Juggernaut": "far", "The Fire and Flames": "far", "The Widower": "far",
+        "Heavyweight Champion": "far",
+        # Any → far
+        "Throw Hands": "far", "Nary a Finger Lifted": "far", "Human Resources": "far",
+        "Deep Pockets": "far", "It Happens to the Best of Us": "far", "Honest Effort": "far",
+        "Tactical Miscalculation": "far", "Drowning in Pigment": "far",
+        "Capital is King": "far", "Brutality": "far", "What are You Doing?": "far",
+        "So Long Liver": "far", "War Criminal": "far",
+        # Orpheum
+        "The Parasite": "orp", "The Stoic": "orp", "The Zealot": "orp", "The Corpse": "orp",
+        "The Leviathan": "orp", "The Orphan": "orp", "Beyond the Dunes": "orp",
+        "Thorough Explorer": "orp", "Emotional and Physical Annihilation": "orp",
+        "Smooch!": "orp", "Swallowed by the Sea": "orp",
+        # Quarry
+        "Above the Mountains": "quarry", "The End?": "quarry",
+        "I'll Make You Regret This": "quarry", "Quarry_Boss_Spared": "quarry",
+        # Far/Orp + Hardmode (регион свой, hardmode отдельным правилом)
+        "The Trickster": "far", "The Naked": "far", "The Failure": "far",
+        "The Incinerated": "far", "The Emotional Disaster": "far",
+        "The Coward": "far", "Bloodline Drinker": "far", "Boom, Headshot": "far",
+        "Plenty of Fish in the Desert": "far", "Duke of the Dunes": "far",
+        "Mass Grave Matters": "far",
+        "The Terminal": "orp", "The Psychic": "orp", "The Black Lung": "orp",
+        "The Messiah": "orp", "Crisis of Faith": "orp", "Master of the Mountains": "orp",
+        # Garden (регион уже требует Orp+Quarry+Hardmode)
+        "The Immortal": "garden", "The Magnum Opus": "garden", "The Exhumed": "garden",
+        "The Mass": "garden", "The Cougar": "garden", "The Mistake": "garden",
+        "All that is Mortal": "garden", "The Witness": "garden", "The Divine": "garden",
+        "Within Yourself": "garden", "Garden of Earthly Delights": "garden",
+        "Decisive and Concise": "garden", "God is Dead and We Have Killed Him": "garden",
+        "Somebody Call the Vatican": "garden", "Bit off More Than You Can Chew": "garden",
+        "Plot Armor": "garden", "Worthy Successor": "garden", "The Second Coming": "garden",
+        "Month of Funerals": "garden", "Fear of Gods Above": "garden",
+        # All areas + HM → garden
+        "Kingslayer": "garden", "Ichor's Last Wish": "garden", "Fog's Prescience": "garden",
+        "The Ungod's Demand": "garden", "The Work of an Artists": "garden",
+        "Every Stone Tuned": "garden", "God of Phalanges, Palms and Pain": "garden",
+        "Dumb Luck": "garden", "Notable Skill": "garden",
+        "Burgeoning Expertise": "garden", "Total and Absolute Mastery": "garden",
+        # Пары героев (Osman/Heaven) — все Garden
+        "Another Dud": "garden", "Purple Heart": "garden", "Rorscach Test": "garden",
+        "Roentgen Rays": "garden", "Health Insurance": "garden", "A Gift?": "garden",
+        "Rotund Amphibian": "garden", "Gamified Cephalopod": "garden",
+        "You Can Do It!": "garden", "Russki Vampire": "garden",
+        "Extra Stitching": "garden", "Pain Killers": "garden",
+        "Lycanthrope's Core": "garden", "Head of Scrybe": "garden",
+        "Fishing Rod": "garden", "Effigy of the Mettle Mother": "garden",
+        "Gilded Mirror": "garden", "Spiked Collar": "garden",
+        "Someone Else's Wedding Ring": "garden", "Fist Full of Ash": "garden",
+        "Czech Hedgehog": "garden", "Cremation": "garden",
+        "Deworming Pills": "garden", "Medical Leches": "garden",
+        "Holy Chalice": "garden", "Seeds of the Consumed": "garden",
+        "The Jersey": "garden", "Pontiff's Parade": "garden",
+        "Mystery Ration": "garden", "Ol' Stumpy": "garden",
+        "Iron Necklace": "garden", "The Apple": "garden",
+        "Trepanation": "garden", "Wheel of Fortune": "garden",
+        "Prussian Blue": "garden", "DDT": "garden",
+        "Blind Faith": "garden", "Modern Medicine": "garden",
+        "Divine Mud": "garden", "Opulent Egg": "garden",
+        "Sculptur's Tools": "garden", "Gospel's Severed Head": "garden",
+        "Wels Catfish": "garden", "Left Shoe": "garden",
+        "Meatre Worm": "garden", "Norris!": "garden",
+        "Burn-Bottle Batch": "garden", "Royal Pine": "garden",
+        "Coelacanth": "garden", "Sacred Shrub": "garden",
+        # Bronzo
+        "Bronzo's 2 Cents": "garden", "What the !@#$ Nowak?": "orp",
+        "Okay Nowak, Seriously Stop!": "far", "That's it Nowak!": "far",
+        "Time to Die!": "orp", "The Shyster": "garden",
+        # Финальные квесты
+        "Mordrake's Untold Tale": "garden", "Brutal Orchestra": "garden",
+        "The Director's Final Frame": "garden",
+    }
 
+    ITEM_ACCESS_RULES = {
         "What are You Doing?": {"any_heroes": ["Fennec", "Kleiver", "Cranes", "Rags", "Leviat", "Gospel", "Mordrake"]},
         "So Long Liver": {"heroes": ["LongLiver"]},
-
-        "All that is Mortal": {"hardmode": True},
-        "The Coward": {"hardmode": True},
-        "The Messiah": {"hardmode": True},
-        "The Witness": {"hardmode": True},
-        "The Divine": {"hardmode": True},
-        "Kingslayer": {"hardmode": True},
-        "Ichor's Last Wish": {"hardmode": True},
-        "Fog's Prescience": {"hardmode": True},
-        "The Ungod's Demand": {"hardmode": True},
-        "Within Yourself": {"hardmode": True},
-        "Duke of the Dunes": {"hardmode": True},
-        "Master of the Mountains": {"hardmode": True},
-        "Garden of Earthly Delights": {"hardmode": True},
-        "The Work of an Artists": {"hardmode": True},
-        "Every Stone Tuned": {"hardmode": True},
-        "God of Phalanges, Palms and Pain": {"hardmode": True},
-        "Decisive and Concise": {"hardmode": True},
-        "God is Dead and We Have Killed Him": {"hardmode": True},
-        "Somebody Call the Vatican": {"hardmode": True},
-        "Bit off More Than You Can Chew": {"hardmode": True},
-        "Bloodline Drinker": {"hardmode": True},
-        "Crisis of Faith": {"hardmode": True},
-        "Plot Armor": {"hardmode": True},
-        "Worthy Successor": {"hardmode": True},
-        "The Second Coming": {"hardmode": True},
-        "Month of Funerals": {"hardmode": True},
-        "Dumb Luck": {"hardmode": True},
-        "Notable Skill": {"hardmode": True},
-        "Burgeoning Expertise": {"hardmode": True},
-        "Total and Absolute Mastery": {"hardmode": True},
-        "Mass Grave Matters": {"hardmode": True},
-        "Boom, Headshot": {"hardmode": True},
-
-        "Another Dud": {"hardmode": True},
-        "Purple Heart": {"hardmode": True},
-        "Rorscach Test": {"hardmode": True},
-        "Roentgen Rays": {"hardmode": True},
-        "Health insurance": {"hardmode": True, "heroes": ["Burnout"]},
-        "A Gift?": {"hardmode": True, "heroes": ["Burnout"]},
-        "Rotund Amphibian": {"hardmode": True, "heroes": ["Fennec"]},
-        "Gamified Cephalopod": {"hardmode": True, "heroes": ["Fennec"]},
-        "You Can Do It!": {"hardmode": True, "heroes": ["Anton"]},
-        "Russki Vampire": {"hardmode": True, "heroes": ["Anton"]},
-        "Extra Stitching": {"hardmode": True, "heroes": ["Splig"]},
-        "Pain Killers": {"hardmode": True, "heroes": ["Splig"]},
-        "Lycanthrope's Core": {"hardmode": True, "heroes": ["Pearl"]},
-        "Head of Scrybe": {"hardmode": True, "heroes": ["Pearl"]},
-        "Fishing Rod": {"hardmode": True, "heroes": ["Thype"]},
-        "Effigy of the Mettle Mother": {"hardmode": True, "heroes": ["Thype"]},
-        "Gilded Mirror": {"hardmode": True, "heroes": ["Griffin"]},
-        "Spiked Collar": {"hardmode": True, "heroes": ["Griffin"]},
-        "The Cougar": {"hardmode": True, "heroes": ["Arnold"]},
-        "Someone Else's Wedding Ring": {"hardmode": True, "heroes": ["Arnold"]},
-        "Fist Full of Ash": {"hardmode": True, "heroes": ["Arnold"]},
-        "Czech Hedgehog": {"hardmode": True, "heroes": ["Dimitri"]},
-        "Cremation": {"hardmode": True, "heroes": ["Dimitri"]},
-        "Deworming Pills": {"hardmode": True, "heroes": ["LongLiver"]},
-        "Medical Leches": {"hardmode": True, "heroes": ["LongLiver"]},
-        "Holy Chalice": {"hardmode": True, "heroes": ["Clive"]},
-        "Seeds of the Consumed": {"hardmode": True, "heroes": ["Clive"]},
-        "The Jersey": {"hardmode": True, "heroes": ["Kleiver"]},
-        "Pontiff's Parade": {"hardmode": True, "heroes": ["Kleiver"]},
-        "Mystery Ration": {"hardmode": True, "heroes": ["Cranes"]},
-        "Ol' Stumpy": {"hardmode": True, "heroes": ["Cranes"]},
-        "Iron Necklace": {"hardmode": True, "heroes": ["Agon"]},
-        "The Apple": {"hardmode": True, "heroes": ["Agon"]},
-        "Trepanation": {"hardmode": True, "heroes": ["Rags"]},
-        "Wheel of Fortune": {"hardmode": True, "heroes": ["Rags"]},
-        "Prussian Blue": {"hardmode": True, "heroes": ["SmokeStacks"]},
-        "DDT": {"hardmode": True, "heroes": ["SmokeStacks"]},
-        "Blind Faith": {"hardmode": True, "heroes": ["Leviat"]},
-        "Modern Medicine": {"hardmode": True, "heroes": ["Leviat"]},
-        "Divine Mud": {"hardmode": True, "heroes": ["Bimini"]},
-        "Opulent Egg": {"hardmode": True, "heroes": ["Bimini"]},
-        "Fear of Gods Above": {"hardmode": True, "heroes": ["Gospel"]},
-        "Sculptur's Tools": {"hardmode": True, "heroes": ["Gospel"]},
-        "Gospel's Severed Head": {"hardmode": True, "heroes": ["Gospel"]},
-        "Wels Catfish": {"hardmode": True, "heroes": ["Mung"]},
-        "Left Shoe": {"hardmode": True, "heroes": ["Mung"]},
-        "Meatre Worm": {"hardmode": True, "heroes": ["Mordrake"]},
-        "Norris!": {"hardmode": True, "heroes": ["Mordrake"]},
-        "Burn-Bottle Batch": {"hardmode": True, "heroes": ["ShellyK"]},
-        "Royal Pine": {"hardmode": True, "heroes": ["ShellyK"]},
-        "Coelacanth": {"hardmode": True, "heroes": ["Formosus"]},
-        "Sacred Shrub": {"hardmode": True, "heroes": ["Formosus"]},
-
-        "The Mistake": {"hardmode": True, "min_heroes": 13},
         "War Criminal": {"any_heroes": ["Arnold"], "or_items": ["Demon Core"]},
-        "Plenty of Fish in the Desert": {"heroes": ["Anton", "ShellyK"]},
 
-        "Bronzo's 2 Cents": {"hardmode": True},
+        # Far/Orp + Hardmode
+        "The Trickster": {"hardmode": True}, "The Naked": {"hardmode": True},
+        "The Failure": {"hardmode": True}, "The Incinerated": {"hardmode": True},
+        "The Emotional Disaster": {"hardmode": True},
+        "The Terminal": {"hardmode": True}, "The Psychic": {"hardmode": True},
+        "The Black Lung": {"hardmode": True},
+        "The Coward": {"hardmode": True}, "The Messiah": {"hardmode": True},
+        "Crisis of Faith": {"hardmode": True}, "Bloodline Drinker": {"hardmode": True},
+        "Boom, Headshot": {"hardmode": True}, "Mass Grave Matters": {"hardmode": True},
+        "Duke of the Dunes": {"hardmode": True}, "Master of the Mountains": {"hardmode": True},
+        "Plenty of Fish in the Desert": {"hardmode": True, "heroes": ["Anton"]},
+
+        # Garden + герои
+        "Health Insurance": {"heroes": ["Burnout"]}, "A Gift?": {"heroes": ["Burnout"]},
+        "Rotund Amphibian": {"heroes": ["Fennec"]}, "Gamified Cephalopod": {"heroes": ["Fennec"]},
+        "You Can Do It!": {"heroes": ["Anton"]}, "Russki Vampire": {"heroes": ["Anton"]},
+        "Extra Stitching": {"heroes": ["Splig"]}, "Pain Killers": {"heroes": ["Splig"]},
+        "Lycanthrope's Core": {"heroes": ["Pearl"]}, "Head of Scrybe": {"heroes": ["Pearl"]},
+        "Fishing Rod": {"heroes": ["Thype"]}, "Effigy of the Mettle Mother": {"heroes": ["Thype"]},
+        "Gilded Mirror": {"heroes": ["Griffin"]}, "Spiked Collar": {"heroes": ["Griffin"]},
+        "The Cougar": {"heroes": ["Arnold"]},
+        "Someone Else's Wedding Ring": {"heroes": ["Arnold"]}, "Fist Full of Ash": {"heroes": ["Arnold"]},
+        "Czech Hedgehog": {"heroes": ["Dimitri"]}, "Cremation": {"heroes": ["Dimitri"]},
+        "Deworming Pills": {"heroes": ["LongLiver"]}, "Medical Leches": {"heroes": ["LongLiver"]},
+        "Holy Chalice": {"heroes": ["Clive"]}, "Seeds of the Consumed": {"heroes": ["Clive"]},
+        "The Jersey": {"heroes": ["Kleiver"]}, "Pontiff's Parade": {"heroes": ["Kleiver"]},
+        "Mystery Ration": {"heroes": ["Cranes"]}, "Ol' Stumpy": {"heroes": ["Cranes"]},
+        "Iron Necklace": {"heroes": ["Agon"]}, "The Apple": {"heroes": ["Agon"]},
+        "Trepanation": {"heroes": ["Rags"]}, "Wheel of Fortune": {"heroes": ["Rags"]},
+        "Prussian Blue": {"heroes": ["SmokeStacks"]}, "DDT": {"heroes": ["SmokeStacks"]},
+        "Blind Faith": {"heroes": ["Leviat"]}, "Modern Medicine": {"heroes": ["Leviat"]},
+        "Divine Mud": {"heroes": ["Bimini"]}, "Opulent Egg": {"heroes": ["Bimini"]},
+        "Fear of Gods Above": {"heroes": ["Gospel"]},
+        "Sculptur's Tools": {"heroes": ["Gospel"]}, "Gospel's Severed Head": {"heroes": ["Gospel"]},
+        "Wels Catfish": {"heroes": ["Mung"]}, "Left Shoe": {"heroes": ["Mung"]},
+        "Meatre Worm": {"heroes": ["Mordrake"]}, "Norris!": {"heroes": ["Mordrake"]},
+        "Burn-Bottle Batch": {"heroes": ["ShellyK"]}, "Royal Pine": {"heroes": ["ShellyK"]},
+        "Coelacanth": {"heroes": ["Formosus"]}, "Sacred Shrub": {"heroes": ["Formosus"]},
+        "The Mistake": {"min_heroes": 13},
+
+        # Bronzo chain
         "What the !@#$ Nowak?": {"hardmode": True, "prior": "Bronzo's 2 Cents"},
         "Okay Nowak, Seriously Stop!": {"hardmode": True, "prior": "What the !@#$ Nowak?"},
         "That's it Nowak!": {"hardmode": True, "prior": "Okay Nowak, Seriously Stop!"},
         "Time to Die!": {"hardmode": True, "prior": "That's it Nowak!"},
-        "The Shyster": {"hardmode": True, "prior": "Time to Die!"},
+        "The Shyster": {"prior": "Time to Die!"},
 
-        "Mordrake's Untold Tale": {"hardmode": True, "all_heroes": True, "all_locations": True},
-        "Brutal Orchestra": {"hardmode": True, "all_heroes": True, "all_locations": True},
-        "The Director's Final Frame": {"hardmode": True, "all_heroes": True, "all_locations": True},
-    }
-
-    # Heroes whose own unlock location requires Hardmode Access.
-    HERO_HARDMODE_REQUIRED = {
-        "Thype", "Griffin", "Arnold", "Dimitri", "Agon", "Rags",
-        "SmokeStacks", "Bimini", "Gospel", "Mung", "Formosus", "Leviat"
+        # Финалы
+        "Mordrake's Untold Tale": {"all_heroes": True, "all_locations": True},
+        "Brutal Orchestra": {"all_heroes": True, "all_locations": True},
+        "The Director's Final Frame": {"all_heroes": True, "all_locations": True},
     }
 
     def generate_early(self):
@@ -521,6 +543,7 @@ class BrutalOrchestraWorld(World):
         self.director_quest = self.options.director_quest.value
         self.mordrake_quest = self.options.mordrake_quest.value
         self.win_count = self.options.win_count.value
+        self.death_link = self.options.death_link.value
 
         self.active_locations = set()
         self.active_locations.update([
@@ -583,8 +606,10 @@ class BrutalOrchestraWorld(World):
                 self.active_locations.add(self.item_check_names[uid])
 
         self.active_locations.add("Quarry_Boss_Spared")
-        self.active_locations.add("Mordrake's Untold Tale")
-        self.active_locations.add("The Director's Final Frame")
+        if self.mordrake_quest:
+            self.active_locations.add("Mordrake's Untold Tale")
+        if self.director_quest:
+            self.active_locations.add("The Director's Final Frame")
 
         if self.hardmode:
             for i in range(1, self.options.garden_battle_count.value + 1):
@@ -615,11 +640,12 @@ class BrutalOrchestraWorld(World):
             "shop_far": self.shop_count_far,
             "shop_orp": self.shop_count_orp,
             "boss_count": self.boss_count,
-            "hardmode": self.hardmode,
-            "bronzo_quest": self.bronzo_quest,
-            "director_quest": self.director_quest,
-            "mordrake_quest": self.mordrake_quest,
+            "hardmode": bool(self.hardmode),
+            "bronzo_quest": bool(self.bronzo_quest),
+            "director_quest": bool(self.director_quest),
+            "mordrake_quest": bool(self.mordrake_quest),
             "win_count": self.win_count,
+            "death_link": bool(self.death_link)
         }
         if self.hardmode:
             data.update({
@@ -651,27 +677,22 @@ class BrutalOrchestraWorld(World):
                         "BuyHero_3", "BuyHero_4", "Shop_Orp", "Orp Boss")
         quarry_prefixes = ("Quarry Access", "Quarry Boss")
         garden_prefixes = ("Garden_Battle", "Garden_MoneyChest", "Garden_ArtifactChest",
-                           "Garden_Shop", "Garden Boss", "Quarry_Boss_Spared")
+                           "Garden_Shop", "Garden Boss")
 
-        far_heroes = [self.hero_check_names[n] for n in ["Anton","Splig","Pearl","Thype","Burnout","Fennec"]]
-        if self.hardmode:
-            far_heroes += [self.hero_check_names[n] for n in ["Griffin","Arnold","Dimitri"]]
-        orp_heroes = [self.hero_check_names[n] for n in ["LongLiver","Clive","Kleiver","Cranes","Agon"]]
-        garden_heroes = [self.hero_check_names[n] for n in ["SmokeStacks","Leviat","Bimini","Mordrake","ShellyK","Formosus","Gospel","Mung"]]
-
+        zone_map = {"far": far, "orp": orp, "quarry": quarry, "garden": garden}
         victory_prefixes = ("Quarry Boss Defeat", "Garden Boss Defeat")
         for name in self.active_locations:
             if name.startswith(victory_prefixes):
                 continue
-            if name.startswith(far_prefixes) or name in far_heroes:
+            if name in self.LOCATION_ZONES:
+                region = zone_map[self.LOCATION_ZONES[name]]
+            elif name.startswith(far_prefixes):
                 region = far
-            elif name.startswith(orp_prefixes) or name in orp_heroes:
+            elif name.startswith(orp_prefixes):
                 region = orp
             elif name.startswith(quarry_prefixes):
                 region = quarry
-            elif name.startswith(garden_prefixes) or name in garden_heroes:
-                region = garden
-            elif name == "Mordrake's Untold Tale" or name == "The Director's Final Frame":
+            elif name.startswith(garden_prefixes):
                 region = garden
             else:
                 region = far
@@ -685,7 +706,33 @@ class BrutalOrchestraWorld(World):
             loc = Location(self.player, loc_name, None, region)
             region.locations.append(loc)
 
+    def create_item(self, name: str) -> Item:
+        if name in ("5 Coins", "10 Coins", "15 Coins"):
+            classification = ItemClassification.filler
+        elif name == "Progressive Start Money":
+            classification = ItemClassification.useful
+        else:
+            classification = ItemClassification.progression
+        return Item(name, classification, self.item_name_to_id[name], self.player)
+
     def create_items(self):
+        skip_always = {"Boss 1", "Boss 2", "Boss 3", "Progressive Start Money",
+               "Winstreak 2 Bundle", "Winstreak 3 Bundle", "Winstreak 4 Bundle",
+               "Winstreak 5 Bundle", "HundredPercent Bundle",
+               # Неиспользуемые базовые шмотки
+               "Anemone Thread", "Beads of Something or Other", "Blood Thirsty Idol",
+               "Boonario", "Bosch's Fist", "Clash of the Bleached", "Crown of Thorns",
+               "Dew-Covered Sticker", "Diseased Bodypart", "Dried Paintbrush",
+               "Eel's Skin", "Fennel's Blessing", "Flesh-Piercing Skewer",
+               "Gilded Rage", "Golden Gun", "Heaven-Bound Noose", "Idle Hands",
+               "Inhalant", "Jumper Cables", "Lucky Charm", "Mangled Messiah",
+               "Marrow's Reach", "Mirror Shard", "Mithridatism", "Mung Moon",
+               "Mutually Assured Destruction", "Myopia Glasses", "Padded Gloves",
+               "Pile of Dirt", "Pox Blanket", "Prayer Beads", "Rabbit's Foot",
+               "Roid Rage", "Scab-Knuckled Gloves", "Sealed Envelope",
+               "Shattered Amulet", "Silk Tourniquet", "Soul Contract", "Stimpak",
+               "Strange Beads", "The Unfinished Bolt", "Thick Gloves",
+               "Thorned Vines", "Tumor"}
         skip_if_bronzo_off = {"Bronzo's 2 Cents (Item)", "Counterfeit coins", "Bananas", "Bronzo's Stupid Hat"}
         skip_if_director_off = {"Broken Doll", "Infernal Eye", "Vyacheslav's Last Sip", "Wailing Whistle",
                                "Cursed Sword", "Enigma", "The Master's Sickle", "Esoteric Artifact"}
@@ -693,29 +740,25 @@ class BrutalOrchestraWorld(World):
 
         created_items = []
         for name in self.item_names:
-            if (not self.bronzo_quest and name in skip_if_bronzo_off) or \
+            if name in skip_always or \
+               (not self.bronzo_quest and name in skip_if_bronzo_off) or \
                (not self.director_quest and name in skip_if_director_off) or \
                (not self.mordrake_quest and name in skip_if_mordrake_off):
                 continue
-            item = Item(name, ItemClassification.progression if name not in ("5 Coins", "10 Coins", "15 Coins") else ItemClassification.filler,
-                       self.item_name_to_id[name], self.player)
-            created_items.append(item)
+            created_items.append(self.create_item(name))
 
-        # total_active включает "победные" локации (Quarry/Garden Boss Defeat N),
-        # которые заполняются не из пула, а через place_locked_item ниже —
-        # поэтому их нужно вычесть при подсчёте нужного количества филлеров.
+        for _ in range(self.options.start_money_count.value):
+            created_items.append(self.create_item("Progressive Start Money"))
+
         total_active = len(self.active_locations)
         needed = total_active - self.win_count - len(created_items)
 
         for i in range(needed):
-            name = "5 Coins" if i % 2 == 0 else "10 Coins"
-            item = Item(name, ItemClassification.filler,
-                       self.item_name_to_id[name], self.player)
-            created_items.append(item)
+            coin = ("5 Coins", "10 Coins", "15 Coins")[i % 3]
+            created_items.append(self.create_item(coin))
 
         self.multiworld.itempool += created_items
 
-        # Place victory items
         for i in range(1, self.win_count + 1):
             loc_name = f"Garden Boss Defeat {i}" if self.hardmode else f"Quarry Boss Defeat {i}"
             self.multiworld.get_location(loc_name, self.player).place_locked_item(
@@ -723,12 +766,10 @@ class BrutalOrchestraWorld(World):
             )
 
         print(f"[BruOrch DEBUG] itempool count for this player: {len(created_items)}")
-        print(f"[BruOrch DEBUG] total_active: {total_active}, win_count: {self.win_count}, needed: {needed}")
-        
+        print(f"[BruOrch DEBUG] total_active: {total_active}, win_count: {self.win_count}, needed: {needed}")        
 
     def _hero_reachable(self, state, hero_short_name):
-        loc_name = self.hero_check_names[hero_short_name]
-        return state.can_reach_location(loc_name, self.player)
+        return state.has(self.hero_check_names[hero_short_name], self.player)
 
     def _make_access_rule(self, spec):
         hardmode = spec.get("hardmode", False)
@@ -796,23 +837,6 @@ class BrutalOrchestraWorld(World):
         self.multiworld.get_entrance("Quarry -> Garden", self.player).access_rule = \
             lambda state: state.has("Hardmode Access", self.player)
 
-        if "Orp Boss" in self.active_locations:
-            self.multiworld.get_location("Orp Boss", self.player).access_rule = \
-                lambda state: state.has("Boss 1", self.player)
-        if "Quarry Boss" in self.active_locations:
-            self.multiworld.get_location("Quarry Boss", self.player).access_rule = \
-                lambda state: state.has("Boss 2", self.player)
-        if "Garden Boss" in self.active_locations:
-            self.multiworld.get_location("Garden Boss", self.player).access_rule = \
-                lambda state: state.has("Boss 3", self.player)
-
-        # Hardmode-gated hero unlocks
-        for hero in self.HERO_HARDMODE_REQUIRED:
-            loc_name = self.hero_check_names.get(hero)
-            if loc_name and loc_name in self.active_locations:
-                self.multiworld.get_location(loc_name, self.player).access_rule = \
-                    lambda state: state.has("Hardmode Access", self.player)
-
         # Item/achievement access rules from the req. table
         for loc_name, spec in self.ITEM_ACCESS_RULES.items():
             if loc_name in self.active_locations:
@@ -823,3 +847,11 @@ class BrutalOrchestraWorld(World):
 
         self.multiworld.completion_condition[self.player] = \
             lambda state: state.has("Garden Boss Defeat" if self.hardmode else "Quarry Boss Defeat", self.player, self.win_count)
+
+        if not self.hardmode:
+            for name in self.active_locations:
+                zone = self.LOCATION_ZONES.get(name)
+                spec = self.ITEM_ACCESS_RULES.get(name, {})
+                if zone == "garden" or spec.get("hardmode"):
+                    self.multiworld.get_location(name, self.player).progress_type = \
+                        LocationProgressType.EXCLUDED

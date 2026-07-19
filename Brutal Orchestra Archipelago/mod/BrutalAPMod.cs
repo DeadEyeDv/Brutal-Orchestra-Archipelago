@@ -4,6 +4,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using System.Text;
 
 namespace BrutalOrchestraAr
 {
@@ -18,24 +19,54 @@ namespace BrutalOrchestraAr
         public static int farBattleCount, orpBattleCount, farMoneyChestCount, orpMoneyChestCount,
             farArtifactChestCount, orpArtifactChestCount, farShopCount, orpShopCount, buyHeroCount,
             gardenBattleCount, gardenMoneyChestCount, gardenArtifactChestCount, gardenShopCount, bossDefeatCount;
-        
-        public static int processedItemIndex = 0;
 
         public static int farBattleLimit = 15, orpBattleLimit = 15, farMoneyLimit = 2, orpMoneyLimit = 2,
             farArtifactLimit = 2, orpArtifactLimit = 2, shopCountFar = 6, shopCountOrp = 6, bossCount = 3,
-            gardenBattleLimit = 10, gardenMoneyLimit = 2, gardenArtifactLimit = 2, gardenShopLimit = 6;
+            gardenBattleLimit = 10, gardenMoneyLimit = 2, gardenArtifactLimit = 2, gardenShopLimit = 6, startMoneyLevel = 0;
 
         public static bool AllowUnlocks = false;
         public static bool IsHardmode = false;
+        public static bool DeathLinkEnabled = false;
+        public static bool suppressDeathLink = false;
+        public static bool InCombat = false;
+        public static int processedItemIndex = 0;
+        public static int winCount = 1;
 
         public static void UnlockWithAP(Action a) { AllowUnlocks = true; try { a(); } finally { AllowUnlocks = false; } }
 
         public static GameInformationHolder cachedHolder = null;
         public static Queue<Action> pendingActions = new Queue<Action>();
         private static Queue<int> pendingCoins = new Queue<int>();
-        private static readonly HashSet<string> transientItems = new HashSet<string> { "5 Coins", "10 Coins", "15 Coins" };
+        private static Queue<string> pendingUnlocks = new Queue<string>();
         private static Dictionary<string, UnlockableModData> allUnlockableData = new Dictionary<string, UnlockableModData>();
         public static Dictionary<string, long> locationIDs = new Dictionary<string, long>();
+        public static Dictionary<long, string> locationIdToName = new Dictionary<long, string>();
+        public static Dictionary<int, string> playerIdToName = new Dictionary<int, string>();
+        public static Dictionary<int, string> playerIdToGame = new Dictionary<int, string>();
+        public static int mySlot = -1;
+
+        public static Dictionary<string, Dictionary<long, string>> dpItems = new Dictionary<string, Dictionary<long, string>>();
+        public static Dictionary<string, Dictionary<long, string>> dpLocations = new Dictionary<string, Dictionary<long, string>>();
+
+        private static readonly HashSet<string> transientItems = new HashSet<string> { "5 Coins", "10 Coins", "15 Coins" };
+
+        public static string LookupItemName(long id, int playerSlot)
+        {
+            if (playerIdToGame.TryGetValue(playerSlot, out string game)
+                && dpItems.TryGetValue(game, out var map)
+                && map.TryGetValue(id, out string name)) return name;
+            if (itemIdToName.TryGetValue(id, out string own)) return own;
+            return id.ToString();
+        }
+
+        public static string LookupLocationName(long id, int playerSlot)
+        {
+            if (playerIdToGame.TryGetValue(playerSlot, out string game)
+                && dpLocations.TryGetValue(game, out var map)
+                && map.TryGetValue(id, out string name)) return name;
+            if (locationIdToName.TryGetValue(id, out string own)) return own;
+            return id.ToString();
+        }
 
         public static Dictionary<long, string> itemIdToName = new Dictionary<long, string>
         {
@@ -88,7 +119,6 @@ namespace BrutalOrchestraAr
             {10187,"Enigma"},{10188,"The Master's Sickle"},{10189,"Esoteric Artifact"},{10190,"Mordrake's Untold Tale"},
             {10191,"Winstreak 2 Bundle"},{10192,"Winstreak 3 Bundle"},{10193,"Winstreak 4 Bundle"},
             {10194,"Winstreak 5 Bundle"},{10195,"HundredPercent Bundle"},
-            // Hero unlock items (achievement names) — appended, continue from last existing ID
             {10196, "The Gambler"}, {10197, "The Conjoined"}, {10198, "The Glutton"},
             {10199, "The Trickster"}, {10200, "The Naked"}, {10201, "The Failure"},
             {10202, "The Incinerated"}, {10203, "The Parasite"}, {10204, "The Stoic"},
@@ -96,10 +126,10 @@ namespace BrutalOrchestraAr
             {10208, "The Psychic"}, {10209, "The Black Lung"}, {10210, "The Mass"},
             {10211, "The Magnum Opus"}, {10212, "The Immortal"}, {10213, "The Sadist"},
             {10214, "The Impaled"}, {10215, "The Mistake"}, {10216, "The Emotional Disaster"},
-            {10217, "The Exhumed"}
+            {10217, "The Exhumed"}, {10218, "Progressive Start Money"}, 
+            {10219, "Human Canvas"}, {10220, "Egg of Incubus"}, {10221, "Exquisite Corpse"}
         };
 
-        // AP-имя предмета → реальный ID wearable-предмета (через Game.TryUnlockItem)
         public static Dictionary<string, string> itemNameToUnlockableID = new Dictionary<string, string>
         {
             {"Rib of Eve","RibOfEve_TW"},{"Immolated Fairy","ImmolatedFairy_TW"},{"Skinned Skate","SkinnedSkate_TW"},
@@ -149,10 +179,19 @@ namespace BrutalOrchestraAr
             {"Bananas","Bananas_TW"},{"Bronzo's Stupid Hat","BronzosStupidHat_TW"},{"Broken Doll","BrokenDoll_TW"},
             {"Infernal Eye","InfernalEye_TW"},{"Vyacheslav's Last Sip","VyacheslavsLastSip_SW"},
             {"Wailing Whistle","WailingWhistle_SW"},{"Cursed Sword","CursedSword_TW"},{"Enigma","Enigma_TW"},
-            {"The Master's Sickle","TheMastersSickle_SW"},{"Esoteric Artifact","EsotericArtifact_SW"}
+            {"The Master's Sickle","TheMastersSickle_SW"},{"Esoteric Artifact","EsotericArtifact_SW"},
+            {"Baltic Brine","BalticBrine_SW"},{"Dum-Dum","DumDum_SW"},
+            {"Expired Medicine","ExpiredMedicine_SW"},{"Forgotten Pump","ForgottenPump_SW"},
+            {"Gentlemen's Glove","GentlemensGlove_SW"},{"Littering Leaflets","LitteringLeaflets_SW"},
+            {"Soap?","Soap_SW"},{"Homeless Hotline","HomelessHotline_SW"},
+            {"Lil Smiley","LilSmiley_SW"},{"Pharmaceutical Roller Coaster","PharmaceuticalRollerCoaster_SW"},
+            {"Used Dog Tags","UsedDogTags_SW"},{"War Bond","WarBond_SW"},
+            {"Professional Procrastinator","ProfessionalProcrastinator_TW"},{"Vowbreaker","Vowbreaker_SW"},
+            {"Sacrificial Saint","SacrificialSaint_TW"},{"Starving Apples","StarvingApples_TW"},
+            {"Human Canvas","HumanCanvas_TW"},{"Egg of Incubus","EggOfIncubus_TW"},
+            {"Exquisite Corpse","ExquisiteCorpse_TW"}
         };
 
-        // Имя AP-предмета (= имя достижения) → ID персонажа в ассетах
         public static readonly Dictionary<string, string> heroItemToCharacterID = new Dictionary<string, string>
         {
             {"The Gambler","Anton_CH"},{"The Conjoined","Splig_CH"},{"The Glutton","Pearl_CH"},
@@ -175,23 +214,6 @@ namespace BrutalOrchestraAr
             {"Mung","The Emotional Disaster"},{"ShellyK","The Cougar"},{"Formosus","The Exhumed"}
         };
 
-        public static readonly Dictionary<string, Achievement> heroAchievementMap = new Dictionary<string, Achievement>
-        {
-            {"Anton",Achievement.ACH_PartyMember_Anton},{"Splig",Achievement.ACH_PartyMember_Splig},
-            {"Pearl",Achievement.ACH_PartyMember_Pearl},{"Thype",Achievement.ACH_PartyMember_Thype},
-            {"Griffin",Achievement.ACH_PartyMember_Griffin},{"Arnold",Achievement.ACH_PartyMember_Arnold},
-            {"Dimitri",Achievement.ACH_PartyMember_Dimitri},{"LongLiver",Achievement.ACH_PartyMember_LongLiver},
-            {"Clive",Achievement.ACH_PartyMember_Clive},{"Kleiver",Achievement.ACH_PartyMember_Kleiver},
-            {"Cranes",Achievement.ACH_PartyMember_Cranes},{"Agon",Achievement.ACH_PartyMember_Agon},
-            {"Rags",Achievement.ACH_PartyMember_Rags},{"SmokeStacks",Achievement.ACH_PartyMember_SmokeStacks},
-            {"Leviat",Achievement.ACH_PartyMember_Leviat},{"Gospel",Achievement.ACH_PartyMember_Gospel},
-            {"Bimini",Achievement.ACH_PartyMember_Bimini},{"Burnout",Achievement.ACH_PartyMember_Burnout},
-            {"Fennec",Achievement.ACH_PartyMember_Fennec},{"Mordrake",Achievement.ACH_PartyMember_Mordrake},
-            {"Mung",Achievement.ACH_PartyMember_Mung},{"ShellyK",Achievement.ACH_PartyMember_ShellyK},
-            {"Formosus",Achievement.ACH_PartyMember_Formosus}
-        };
-
-        // AP-ID достижения → имя AP-локации (для непрямых предметов-ачивок)
         public static readonly Dictionary<string, string> itemCheckNames = new Dictionary<string, string>
         {
             {"Roids","The Juggernaut"},{"Hickory","The Fire and Flames"},{"Mobius","The Widower"},
@@ -255,6 +277,84 @@ namespace BrutalOrchestraAr
             {"Winstreak5","Total and Absolute Mastery"},{"HundredPercent","Brutal Orchestra"}
         };
 
+        public static readonly Dictionary<Achievement, string> achievementCheckMap = new Dictionary<Achievement, string>
+        {
+            {Achievement.ACH_PartyMember_Anton,"The Gambler"},{Achievement.ACH_PartyMember_Splig,"The Conjoined"},
+            {Achievement.ACH_PartyMember_Pearl,"The Glutton"},{Achievement.ACH_PartyMember_Thype,"The Trickster"},
+            {Achievement.ACH_PartyMember_Griffin,"The Naked"},{Achievement.ACH_PartyMember_Arnold,"The Failure"},
+            {Achievement.ACH_PartyMember_Dimitri,"The Incinerated"},{Achievement.ACH_PartyMember_LongLiver,"The Parasite"},
+            {Achievement.ACH_PartyMember_Clive,"The Stoic"},{Achievement.ACH_PartyMember_Kleiver,"The Zealot"},
+            {Achievement.ACH_PartyMember_Cranes,"The Corpse"},{Achievement.ACH_PartyMember_Agon,"The Terminal"},
+            {Achievement.ACH_PartyMember_Rags,"The Psychic"},{Achievement.ACH_PartyMember_SmokeStacks,"The Black Lung"},
+            {Achievement.ACH_PartyMember_Leviat,"The Mass"},{Achievement.ACH_PartyMember_Gospel,"The Magnum Opus"},
+            {Achievement.ACH_PartyMember_Bimini,"The Immortal"},{Achievement.ACH_PartyMember_Burnout,"The Sadist"},
+            {Achievement.ACH_PartyMember_Fennec,"The Impaled"},{Achievement.ACH_PartyMember_Mordrake,"The Mistake"},
+            {Achievement.ACH_PartyMember_Mung,"The Emotional Disaster"},{Achievement.ACH_PartyMember_ShellyK,"The Cougar"},
+            {Achievement.ACH_PartyMember_Formosus,"The Exhumed"},
+            {Achievement.ACH_Area_1,"Beyond the Dunes"},{Achievement.ACH_Area_2,"Above the Mountains"},
+            {Achievement.ACH_Area_3,"Within Yourself"},
+            {Achievement.ACH_Area_1_Perfect,"Duke of the Dunes"},{Achievement.ACH_Area_2_Perfect,"Master of the Mountains"},
+            {Achievement.ACH_Area_3_Perfect,"Garden of Earthly Delights"},{Achievement.ACH_Area_All_Perfect,"The Work of an Artists"},
+            {Achievement.ACH_Area_FullZoneExplore,"Thorough Explorer"},{Achievement.ACH_Area_FullWorldExplore,"Every Stone Tuned"},
+            {Achievement.ACH_Ending_Easy_CorpseKill,"The End?"},{Achievement.ACH_Ending_Hard,"All that is Mortal"},
+            {Achievement.ACH_Boss_All_Main,"Kingslayer"},{Achievement.ACH_Boss_Roids,"The Juggernaut"},
+            {Achievement.ACH_Boss_TriggerFingers,"The Coward"},{Achievement.ACH_Boss_Hickory,"The Fire and Flames"},
+            {Achievement.ACH_Boss_Mobius,"The Widower"},{Achievement.ACH_Boss_Ouroboros,"The Leviathan"},
+            {Achievement.ACH_Boss_Charcarrion,"The Messiah"},{Achievement.ACH_Boss_Smoothskin,"The Orphan"},
+            {Achievement.ACH_Boss_Osman,"The Witness"},{Achievement.ACH_Boss_Heaven,"The Divine"},
+            {Achievement.ACH_Boss_Bronzo,"The Shyster"},
+            {Achievement.ACH_NPC_Ichor,"Ichor's Last Wish"},{Achievement.ACH_NPC_Bronzo,"Bronzo's 2 Cents"},
+            {Achievement.ACH_NPC_Fogs,"Fog's Prescience"},{Achievement.ACH_NPC_Mordrake,"Mordrake's Untold Tale"},
+            {Achievement.ACH_NPC_Emissary,"The Ungod's Demand"},{Achievement.ACH_NPC_Dollmaster,"The Director's Final Frame"},
+            {Achievement.ACH_Unlock_Boyle_Osman,"Another Dud"},{Achievement.ACH_Unlock_Boyle_Heaven,"Purple Heart"},
+            {Achievement.ACH_Unlock_Hans_Osman,"Rorscach Test"},{Achievement.ACH_Unlock_Hans_Heaven,"Roentgen Rays"},
+            {Achievement.ACH_Unlock_Anton_Osman,"You Can Do It!"},{Achievement.ACH_Unlock_Anton_Heaven,"Russki Vampire"},
+            {Achievement.ACH_Unlock_Splig_Osman,"Extra Stitching"},{Achievement.ACH_Unlock_Splig_Heaven,"Pain Killers"},
+            {Achievement.ACH_Unlock_Pearl_Osman,"Lycanthrope's Core"},{Achievement.ACH_Unlock_Pearl_Heaven,"Head of Scrybe"},
+            {Achievement.ACH_Unlock_Thype_Osman,"Fishing Rod"},{Achievement.ACH_Unlock_Thype_Heaven,"Effigy of the Mettle Mother"},
+            {Achievement.ACH_Unlock_Griffin_Osman,"Gilded Mirror"},{Achievement.ACH_Unlock_Griffin_Heaven,"Spiked Collar"},
+            {Achievement.ACH_Unlock_Arnold_Osman,"Someone Else's Wedding Ring"},{Achievement.ACH_Unlock_Arnold_Heaven,"Fist Full of Ash"},
+            {Achievement.ACH_Unlock_Dimitri_Osman,"Czech Hedgehog"},{Achievement.ACH_Unlock_Dimitri_Heaven,"Cremation"},
+            {Achievement.ACH_Unlock_Longliver_Osman,"Deworming Pills"},{Achievement.ACH_Unlock_Longliver_Heaven,"Medical Leches"},
+            {Achievement.ACH_Unlock_Clive_Osman,"Holy Chalice"},{Achievement.ACH_Unlock_Clive_Heaven,"Seeds of the Consumed"},
+            {Achievement.ACH_Unlock_Kleiver_Osman,"The Jersey"},{Achievement.ACH_Unlock_Kleiver_Heaven,"Pontiff's Parade"},
+            {Achievement.ACH_Unlock_Cranes_Osman,"Mystery Ration"},{Achievement.ACH_Unlock_Cranes_Heaven,"Ol' Stumpy"},
+            {Achievement.ACH_Unlock_Agon_Osman,"Iron Necklace"},{Achievement.ACH_Unlocked_Agon_Heaven,"The Apple"},
+            {Achievement.ACH_Unlocked_Rags_Osman,"Trepanation"},{Achievement.ACH_Unlocked_Rags_Heaven,"Wheel of Fortune"},
+            {Achievement.ACH_Unlocked_SmokeStacks_Osman,"Prussian Blue"},{Achievement.ACH_Unlocked_SmokeStacks_Heaven,"DDT"},
+            {Achievement.ACH_Unlocked_Leviat_Osman,"Blind Faith"},{Achievement.ACH_Unlocked_Leviat_Heaven,"Modern Medicine"},
+            {Achievement.ACH_Unlocked_Gospel_Osman,"Sculptur's Tools"},{Achievement.ACH_Unlocked_Gospel_Heaven,"Gospel's Severed Head"},
+            {Achievement.ACH_Unlocked_Bimini_Osman,"Divine Mud"},{Achievement.ACH_Unlocked_Bimini_Heaven,"Opulent Egg"},
+            {Achievement.ACH_Unlocked_Burnout_Osman,"Health Insurance"},{Achievement.ACH_Unlocked_Burnout_Heaven,"A Gift?"},
+            {Achievement.ACH_Unlocked_Fennec_Osman,"Rotund Amphibian"},{Achievement.ACH_Unlocked_Fennec_Heaven,"Gamified Cephalopod"},
+            {Achievement.ACH_Unlocked_Mordrake_Osman,"Meatre Worm"},{Achievement.ACH_Unlocked_Mordrake_Heaven,"Norris!"},
+            {Achievement.ACH_Unlocked_Mung_Osman,"Wels Catfish"},{Achievement.ACH_Unlocked_Mung_Heaven,"Left Shoe"},
+            {Achievement.ACH_Unlocked_ShellyK_Osman,"Burn-Bottle Batch"},{Achievement.ACH_Unlocked_ShellyK_Heaven,"Royal Pine"},
+            {Achievement.ACH_Unlocked_Formosus_Osman,"Coelacanth"},{Achievement.ACH_Unlocked_Formosus_Heaven,"Sacred Shrub"},
+            {Achievement.ACH_100Percent,"Brutal Orchestra"},
+            {Achievement.ACH_Misc_UngodKill,"God is Dead and We Have Killed Him"},
+            {Achievement.ACH_Misc_SlapBossKill,"Throw Hands"},{Achievement.ACH_Misc_SlapBossKillAll,"God of Phalanges, Palms and Pain"},
+            {Achievement.ACH_Misc_Headshot,"Boom, Headshot"},{Achievement.ACH_Misc_Trauma,"Emotional and Physical Annihilation"},
+            {Achievement.ACH_MISC_Decomposition,"Crisis of Faith"},{Achievement.ACH_MISC_NoNowak,"Plot Armor"},
+            {Achievement.ACH_MISC_Overflow,"Drowning in Pigment"},{Achievement.ACH_MISC_FriendlyFire,"What are You Doing?"},
+            {Achievement.ACH_Misc_WrongPigment,"Tactical Miscalculation"},{Achievement.ACH_Misc_Lose,"It Happens to the Best of Us"},
+            {Achievement.ACH_Misc_Speedrun,"Decisive and Concise"},{Achievement.ACH_Misc_OuroKiss,"Smooch!"},
+            {Achievement.ACH_Misc_UnfinishedHeirKill,"Bloodline Drinker"},{Achievement.ACH_Misc_RoidsCancel,"Heavyweight Champion"},
+            {Achievement.ACH_Misc_NowakSurviveOsman,"Worthy Successor"},{Achievement.ACH_Misc_HeavenRebirth,"The Second Coming"},
+            {Achievement.ACH_Misc_BuyAllShop,"Deep Pockets"},{Achievement.ACH_Misc_BuyAllParty,"Human Resources"},
+            {Achievement.ACH_Misc_HardKill,"Brutality"},{Achievement.ACH_Misc_DontAct,"Nary a Finger Lifted"},
+            {Achievement.ACH_Misc_LoseLongLiver,"So Long Liver"},{Achievement.ACH_Misc_100DamageDealt,"War Criminal"},
+            {Achievement.ACH_Misc_SurviveStarvation,"Swallowed by the Sea"},
+            {Achievement.ACH_Misc_Winstreak2,"Dumb Luck"},{Achievement.ACH_Misc_Winstreak3,"Notable Skill"},
+            {Achievement.ACH_Misc_Winstreak4,"Burgeoning Expertise"},{Achievement.ACH_Misc_Winstreak5,"Total and Absolute Mastery"},
+            {Achievement.ACH_Misc_100Coins,"Capital is King"},{Achievement.ACH_Misc_LoseToBoss,"Honest Effort"},
+            {Achievement.ACH_Misc_Bronzo_1,"What the !@#$ Nowak?"},{Achievement.ACH_Misc_Bronzo_2,"Okay Nowak, Seriously Stop!"},
+            {Achievement.ACH_Misc_Bronzo_3,"That's it Nowak!"},{Achievement.ACH_Misc_Bronzo_4,"Time to Die!"},
+            {Achievement.ACH_Misc_SepulchreKill,"Somebody Call the Vatican"},{Achievement.ACH_Misc_XiphactinusKill,"Bit off More Than You Can Chew"},
+            {Achievement.ACH_Misc_Casualties_CH_5,"Month of Funerals"},{Achievement.ACH_Misc_Casualties_EN_30,"Mass Grave Matters"},
+            {Achievement.ACH_Misc_Prodigal_Flee,"Fear of Gods Above"},{Achievement.ACH_Misc_Anton_Sad,"Plenty of Fish in the Desert"}
+        };
+
         private static readonly string[] allUnlockIDs = {
             "Roids","Hickory","Mobius","TheOuroboros","Smoothskin","FarShore","Orpheum","ZoneExplorer","BossSlap",
             "RoidsMissTurn","SmoothskinTrauma","DontAct","FoolsDepleted","ShopDepleted","Ending_GameOver","LoseToBoss",
@@ -282,10 +382,33 @@ namespace BrutalOrchestraAr
             "Winstreak2","Winstreak3","Winstreak4","Winstreak5","HundredPercent"
         };
 
-        private bool showGui = true;
-        private string guiServer = "ws://localhost:38281";
-        private string guiSlot = "Test1";
-        private Rect windowRect = new Rect(20, 20, 300, 130);
+        private static bool showGui = true;
+        private static string guiServer = "localhost:38281";
+        private static string guiSlot = "Test1";
+        private static string guiPassword = "";
+        private static string connectStatus = "";
+        private static bool isConnecting = false;
+        private static bool showChat = false;
+        private Rect windowRect = new Rect(20, 20, 320, 190);
+        private Rect chatRect = new Rect(20, 230, 420, 260);
+        private bool chatCollapsed = false;
+        private string chatInput = "";
+        private Vector2 chatScroll = Vector2.zero;
+
+        private const string PrefServer = "BrutalAP_LastServer";
+        private const string PrefSlot = "BrutalAP_LastSlot";
+
+        private static readonly List<string> chatLines = new List<string>();
+        private static readonly object chatLock = new object();
+
+        public static void AddChatLine(string line)
+        {
+            lock (chatLock)
+            {
+                chatLines.Add(line);
+                if (chatLines.Count > 200) chatLines.RemoveAt(0);
+            }
+        }
 
         void Start()
         {
@@ -293,30 +416,132 @@ namespace BrutalOrchestraAr
             new Harmony("brutal.ap.mod").PatchAll();
             ForceCacheUnlockableData();
             DumpUnlockableIDs();
+            guiServer = PlayerPrefs.GetString(PrefServer, "localhost:38281");
+            guiSlot = PlayerPrefs.GetString(PrefSlot, "");
             showGui = true;
             Debug.Log("MOD LOADED – waiting for user to connect...");
         }
 
         void OnGUI()
         {
-            if (!showGui) return;
-            windowRect = GUILayout.Window(123456, windowRect, DrawConnectWindow, "Archipelago Connect");
+            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.F1 && apClient != null)
+            {
+                showChat = !showChat;
+                Event.current.Use();
+            }
+
+            if (showGui)
+                windowRect = GUILayout.Window(123456, windowRect, DrawConnectWindow, "Archipelago Connect");
+
+            if (showChat)
+                chatRect = GUILayout.Window(123457, chatRect, DrawChatWindow, "Archipelago");
         }
 
         void DrawConnectWindow(int id)
         {
-            GUILayout.Label("Server URL (ws://...):");
+            GUI.enabled = !isConnecting;
+
+            GUILayout.Label("Server (host:port):");
             guiServer = GUILayout.TextField(guiServer);
             GUILayout.Label("Slot Name:");
             guiSlot = GUILayout.TextField(guiSlot);
-            if (GUILayout.Button("Connect") && !string.IsNullOrEmpty(guiServer) && !string.IsNullOrEmpty(guiSlot))
+            GUILayout.Label("Password (optional):");
+            guiPassword = GUILayout.PasswordField(guiPassword, '*');
+
+            if (!string.IsNullOrEmpty(connectStatus))
+                GUILayout.Label(connectStatus);
+
+            if (GUILayout.Button(isConnecting ? "Connecting..." : "Connect"))
             {
-                apClient = new APClient(guiServer, guiSlot);
-                apClient.Connect();
-                FlushPendingChecks();
-                showGui = false;
-                Debug.Log("AP: Connecting to " + guiServer + " as " + guiSlot);
+                string server = guiServer.Trim();
+                string slot = guiSlot.Trim();
+
+                if (string.IsNullOrEmpty(server) || string.IsNullOrEmpty(slot))
+                {
+                    connectStatus = "Enter server and slot name.";
+                }
+                else
+                {
+                    server = StripScheme(server);
+                    PlayerPrefs.SetString(PrefServer, server);
+                    PlayerPrefs.SetString(PrefSlot, slot);
+                    PlayerPrefs.Save();
+
+                    isConnecting = true;
+                    connectStatus = "Connecting...";
+                    apClient = new APClient(server, slot, string.IsNullOrEmpty(guiPassword) ? null : guiPassword);
+                    apClient.Connect();
+                }
             }
+
+            GUI.enabled = true;
+            GUI.DragWindow();
+        }
+
+        void DrawChatWindow(int id)
+        {
+            
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(chatCollapsed ? "▼ Expand" : "▲ Collapse"))
+            {
+                chatCollapsed = !chatCollapsed;
+                chatRect.height = chatCollapsed ? 60 : 260;
+            }
+            if (GUILayout.Button(DeathLinkEnabled ? "DeathLink: ON" : "DeathLink: OFF", GUILayout.Width(120)))
+            {
+                DeathLinkEnabled = !DeathLinkEnabled;
+                apClient?.SendConnectUpdate(DeathLinkEnabled);
+                AddChatLine("*** DeathLink " + (DeathLinkEnabled ? "enabled" : "disabled") + " ***");
+            }
+            GUILayout.EndHorizontal();
+
+            if (!chatCollapsed)
+            {
+                chatScroll = GUILayout.BeginScrollView(chatScroll, GUILayout.Height(160));
+                var richLabel = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true };
+                lock (chatLock)
+                    foreach (var line in chatLines)
+                        GUILayout.Label(line, richLabel);
+                GUILayout.EndScrollView();
+
+                GUILayout.BeginHorizontal();
+                chatInput = GUILayout.TextField(chatInput);
+                bool enter = Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Return;
+                if ((GUILayout.Button("Send", GUILayout.Width(60)) || enter) && !string.IsNullOrEmpty(chatInput))
+                {
+                    apClient?.SendChat(chatInput);
+                    chatInput = "";
+                }
+                GUILayout.EndHorizontal();
+            }
+
+            GUI.DragWindow();
+        }
+
+        private static string StripScheme(string s)
+        {
+            foreach (var p in new[] { "wss://", "ws://", "https://", "http://" })
+                if (s.StartsWith(p, StringComparison.OrdinalIgnoreCase)) return s.Substring(p.Length);
+            return s;
+        }
+
+        public static void OnConnectSucceeded()
+        {
+            isConnecting = false;
+            connectStatus = "";
+            showGui = false;
+            showChat = true;
+            FlushPendingChecks();
+            AddChatLine("*** Connected ***");
+            Debug.Log("AP: Connected successfully");
+        }
+
+        public static void OnConnectFailed(string reason)
+        {
+            isConnecting = false;
+            connectStatus = "Failed: " + reason;
+            showGui = true;
+            Debug.LogWarning("AP: Connect failed — " + reason);
         }
 
         private static string GetPlayerPrefsKey() =>
@@ -355,6 +580,7 @@ namespace BrutalOrchestraAr
                 int farBat = 24, orpBat = 24, farMon = 2, orpMon = 2, farArt = 2, orpArt = 2,
                     shopFar = 24, shopOrp = 24, bosses = 3, gardenBat = 10, gardenMon = 2, gardenArt = 2, gardenShops = 6;
                 bool hardmode = true;
+                bool deathLink = false;
 
                 if (!string.IsNullOrEmpty(slotDataJson))
                 {
@@ -367,7 +593,11 @@ namespace BrutalOrchestraAr
                     ParseInt(slotDataJson, "\"shop_far\"", ref shopFar);
                     ParseInt(slotDataJson, "\"shop_orp\"", ref shopOrp);
                     ParseInt(slotDataJson, "\"boss_count\"", ref bosses);
+                    int winC = 1;
+                    ParseInt(slotDataJson, "\"win_count\"", ref winC);
+                    winCount = winC;
                     ParseBool(slotDataJson, "\"hardmode\"", ref hardmode);
+                    ParseBool(slotDataJson, "\"death_link\"", ref deathLink);
                     if (hardmode)
                     {
                         ParseInt(slotDataJson, "\"garden_battle_count\"", ref gardenBat);
@@ -376,6 +606,11 @@ namespace BrutalOrchestraAr
                         ParseInt(slotDataJson, "\"garden_shop_count\"", ref gardenShops);
                     }
                 }
+
+                DeathLinkEnabled = deathLink;
+                Debug.Log($"AP: DeathLinkEnabled = {DeathLinkEnabled}");
+                if (DeathLinkEnabled) apClient?.SendConnectUpdate(true);
+                Debug.Log($"AP: DeathLinkEnabled = {DeathLinkEnabled}");
 
                 farBattleLimit = farBat; orpBattleLimit = orpBat; farMoneyLimit = farMon; orpMoneyLimit = orpMon;
                 farArtifactLimit = farArt; orpArtifactLimit = orpArt; shopCountFar = shopFar; shopCountOrp = shopOrp;
@@ -450,9 +685,11 @@ namespace BrutalOrchestraAr
                 for (int i = 1; i <= 10; i++) locationIDs[$"Quarry Boss Defeat {i}"] = 4000 + i;
                 for (int i = 1; i <= 10; i++) locationIDs[$"Garden Boss Defeat {i}"] = 4100 + i;
 
+                locationIdToName.Clear();
+                foreach (var kv in locationIDs) locationIdToName[kv.Value] = kv.Key;
+
                 Debug.Log($"AP: Initialized location IDs. Hardmode: {hardmode}");
 
-                Debug.Log($"AP: InitSlotData — CurrentSeed = '{APClient.CurrentSeed ?? "<null>"}'");
                 EnsureMinimumHeroes();
                 LoadCountersForCurrentSeed();
                 LoadSentChecks();
@@ -460,6 +697,11 @@ namespace BrutalOrchestraAr
                 LoadProcessedItemIndex();
                 LoadReceivedItemsForCurrentSeed();
                 InitStartingChecks();
+
+                if (cachedHolder == null)
+                    cachedHolder = Resources.FindObjectsOfTypeAll<GameInformationHolder>().FirstOrDefault();
+                ApplyPendingCoins();
+                ProcessPendingActions();
             }
             catch (Exception e) { Debug.LogError("InitSlotData error: " + e); }
         }
@@ -498,8 +740,11 @@ namespace BrutalOrchestraAr
                     pendingActions.Enqueue(grantAction);
                     return;
                 }
-                foreach (var id in new[] { "Boyle_CH", "Hans_CH" })
-                    Debug.Log($"AP: Starter hero '{id}' -> newly unlocked: {game.TryUnlockCharacter(id)}");
+                UnlockWithAP(() =>
+                {
+                    foreach (var id in new[] { "Boyle_CH", "Hans_CH" })
+                        Debug.Log($"AP: Starter hero '{id}' -> newly unlocked: {game.TryUnlockCharacter(id)}");
+                });
             };
 
             if (cachedHolder?.Game != null) grantAction();
@@ -598,7 +843,6 @@ namespace BrutalOrchestraAr
             string key = "BrutalAP_SentChecks_" + (APClient.CurrentSeed ?? "default");
             PlayerPrefs.SetString(key, string.Join(";", sentChecks.ToArray()));
             PlayerPrefs.Save();
-            Debug.Log("AP: Saved sent checks: " + string.Join(";", sentChecks));
         }
 
         public static void LoadSentChecks()
@@ -624,17 +868,17 @@ namespace BrutalOrchestraAr
             PlayerPrefs.SetInt(key, bossDefeatCount);
             PlayerPrefs.Save();
         }
-        
+
         public static void LoadProcessedItemIndex()
         {
-            string key = "BrutalAP_ItemIndex_" + (APClient.CurrentSeed ?? "default");
+            string key = "BrutalAP_ItemIndex_" + (APClient.CurrentSeed);
             if (PlayerPrefs.HasKey(key)) processedItemIndex = PlayerPrefs.GetInt(key);
         }
 
         public static void SaveProcessedItemIndex()
         {
-            string key = "BrutalAP_ItemIndex_" + (APClient.CurrentSeed ?? "default");
-            PlayerPrefs.SetInt(key, processedItemIndex);
+            if (string.IsNullOrEmpty(APClient.CurrentSeed)) return; // сид ещё не известен — не пишем
+            PlayerPrefs.SetInt("BrutalAP_ItemIndex_" + APClient.CurrentSeed, processedItemIndex);
             PlayerPrefs.Save();
         }
 
@@ -668,8 +912,11 @@ namespace BrutalOrchestraAr
                     pendingActions.Enqueue(unlockAction);
                     return;
                 }
-                bool newly = game.TryUnlockCharacter(charID);
-                Debug.Log($"AP: TryUnlockCharacter('{charID}') for '{itemName}' -> newly unlocked: {newly}");
+                UnlockWithAP(() =>
+                {
+                    bool newly = game.TryUnlockCharacter(charID);
+                    Debug.Log($"AP: TryUnlockCharacter('{charID}') for '{itemName}' -> newly unlocked: {newly}");
+                });
             };
 
             if (cachedHolder?.Game != null) unlockAction();
@@ -707,15 +954,6 @@ namespace BrutalOrchestraAr
         private static void ApplyItem(string itemName)
         {
             Debug.Log($"AP: Applying item: {itemName}");
-
-            switch (itemName)
-            {
-                case "Winstreak 2 Bundle": foreach (var s in winstreak2Sub) ApplyItem(s); return;
-                case "Winstreak 3 Bundle": foreach (var s in winstreak3Sub) ApplyItem(s); return;
-                case "Winstreak 4 Bundle": foreach (var s in winstreak4Sub) ApplyItem(s); return;
-                case "Winstreak 5 Bundle": foreach (var s in winstreak5Sub) ApplyItem(s); return;
-                case "HundredPercent Bundle": foreach (var s in hundredPercentSub) ApplyItem(s); return;
-            }
 
             if (heroItemToCharacterID.ContainsKey(itemName)) { UnlockHeroByAPName(itemName); return; }
 
@@ -766,8 +1004,11 @@ namespace BrutalOrchestraAr
                         pendingActions.Enqueue(unlockAction);
                         return;
                     }
-                    bool wasNewlyUnlocked = game.TryUnlockItem(unlockID);
-                    Debug.Log($"AP: TryUnlockItem('{unlockID}') for '{itemName}' -> newly unlocked: {wasNewlyUnlocked}");
+                    UnlockWithAP(() =>
+                    {
+                        bool wasNewlyUnlocked = game.TryUnlockItem(unlockID);
+                        Debug.Log($"AP: TryUnlockItem('{unlockID}') for '{itemName}' -> newly unlocked: {wasNewlyUnlocked}");
+                    });
                 };
 
                 if (cachedHolder?.Game != null) unlockAction();
@@ -779,24 +1020,42 @@ namespace BrutalOrchestraAr
             }
         }
 
-        public static void OnItemReceived(string itemName, bool isReplay = false)
+        public static void OnItemReceived(string itemName, bool applyTransient)
         {
-            // Расходуемые предметы (монеты): выдаём многократно, но не переигрываем историю
+            if (itemName == "Progressive Start Money")
+            {
+                startMoneyLevel++;
+                Debug.Log($"AP: Start Money level = {startMoneyLevel}");
+                return;
+            }
+            
+            if (itemName == "Quarry Boss Defeat" || itemName == "Garden Boss Defeat") return;
+            
             if (transientItems.Contains(itemName))
             {
-                if (isReplay) return;
+                if (!applyTransient) return;
                 try { ApplyItem(itemName); }
                 catch (Exception e) { Debug.LogError($"AP: ApplyItem({itemName}) failed: {e}"); }
                 return;
             }
 
-            if (receivedAPItems.Contains(itemName)) return;
             try { ApplyItem(itemName); }
             catch (Exception e) { Debug.LogError($"AP: ApplyItem({itemName}) failed: {e}"); }
-            receivedAPItems.Add(itemName);
-            SaveReceivedItems();
+            if (!receivedAPItems.Contains(itemName))
+            {
+                receivedAPItems.Add(itemName);
+                SaveReceivedItems();
+            }
+            
+            
         }
 
+        void Update()
+        {
+            if (pendingDeath && cachedHolder != null)
+                TryProcessPendingDeath();
+        }
+        
         public static void DumpWearableObject(string objectName)
         {
             var allObjects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
@@ -829,6 +1088,72 @@ namespace BrutalOrchestraAr
             }
         }
 
+        // ===== DeathLink =====
+        private static bool pendingDeath = false;
+
+        public static void QueueIncomingDeath() => pendingDeath = true;
+
+        public static bool TryProcessPendingDeath()
+        {
+            if (!pendingDeath) return false;
+
+            try
+            {
+                if (InCombat)
+                {
+                    var cm = CombatManager.Instance;
+                    var chars = cm?._stats?.CharactersOnField;
+                    if (chars == null)
+                    {
+                        Debug.LogWarning("AP: DeathLink in combat but stats not ready, will retry");
+                        return false;
+                    }
+                    suppressDeathLink = true;
+                    int killed = 0;
+                    foreach (var kv in chars)
+                    {
+                        if (kv.Value != null && kv.Value.IsAlive)
+                        {
+                            int hp;
+                            kv.Value.DirectDeath(null, false, out hp);
+                            killed++;
+                        }
+                    }
+                    Debug.Log($"AP: DeathLink — DirectDeath for {killed} characters");
+                    pendingDeath = false;
+                    return true;
+                }
+
+                var pd = cachedHolder?.Run?.playerData;
+                if (pd == null)
+                {
+                    Debug.LogWarning("AP: DeathLink pending but playerData is null, will retry");
+                    return false;
+                }
+
+                suppressDeathLink = true; // сбросится в DeathLinkSendPatch после нашего вайпа
+
+                int count = 0;
+                foreach (var info in pd.CharacterListData)
+                {
+                    if (info is CharacterInGameData ch && ch.IsInParty && ch.CurrentHealth > 0)
+                    {
+                        ch.SetCurrentHealth(0);
+                        count++;
+                    }
+                }
+                Debug.Log($"AP: DeathLink — set HP to 0 for {count} party members");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("AP: DeathLink processing failed: " + e);
+                suppressDeathLink = false;
+            }
+
+            pendingDeath = false;
+            return true;
+        }
+
         // ========== ПАТЧИ ==========
         [HarmonyPatch(typeof(GameInformationHolder), "PostCombatProcess")]
         class BattlePatch
@@ -836,12 +1161,19 @@ namespace BrutalOrchestraAr
             static void Postfix(GameInformationHolder __instance)
             {
                 if (__instance == null) return;
+
+                InCombat = false;
+                if (pendingDeath)
+                {
+                    TryProcessPendingDeath();
+                    return;
+                }
+
                 if (cachedHolder != __instance)
                 {
                     cachedHolder = __instance;
                     Debug.Log("AP: Holder cached");
                 }
-                // ФИКС: выполняем каждый раз, а не только при смене холдера
                 ApplyPendingCoins();
                 ProcessPendingActions();
 
@@ -855,6 +1187,7 @@ namespace BrutalOrchestraAr
                         bossDefeatCount++;
                         SaveBossDefeatCount();
                         SendCheck(IsHardmode ? $"Garden Boss Defeat {bossDefeatCount}" : $"Quarry Boss Defeat {bossDefeatCount}");
+                        if (bossDefeatCount >= winCount) apClient?.SendGoal();
                     }
                     return;
                 }
@@ -885,6 +1218,24 @@ namespace BrutalOrchestraAr
             }
         }
 
+        [HarmonyPatch(typeof(CombatManager), "InitializeCombat")]
+        class CombatStartPatch
+        {
+            static void Postfix() { InCombat = true; }
+        }
+
+        [HarmonyPatch(typeof(CombatManager), "ProcessGameOverEnding")]
+        class DeathLinkSendPatch
+        {
+            static void Postfix()
+            {
+                if (!DeathLinkEnabled) return;
+                if (suppressDeathLink) { suppressDeathLink = false; return; }
+                string src = playerIdToName.TryGetValue(mySlot, out var n) ? n : "Player";
+                apClient?.SendDeathLink(src + "'s party was wiped");
+            }
+        }
+
         [HarmonyPatch(typeof(MoneyChestContentData), "OpenTreasure")]
         class MoneyChestPatch
         {
@@ -894,7 +1245,6 @@ namespace BrutalOrchestraAr
                 if (cachedHolder == null)
                 {
                     cachedHolder = Resources.FindObjectsOfTypeAll<GameInformationHolder>().FirstOrDefault();
-                    Debug.Log("AP: cachedHolder was null, tried to find via Resources: " + (cachedHolder != null));
                 }
                 if (cachedHolder?.Run == null) { Debug.Log("AP: Holder or Run is null, aborting check"); return; }
 
@@ -930,7 +1280,6 @@ namespace BrutalOrchestraAr
                 if (cachedHolder == null)
                 {
                     cachedHolder = Resources.FindObjectsOfTypeAll<GameInformationHolder>().FirstOrDefault();
-                    Debug.Log("AP: cachedHolder was null, tried to find via Resources: " + (cachedHolder != null));
                 }
                 if (cachedHolder?.Run == null) { Debug.Log("AP: Holder or Run is null, aborting check"); return; }
 
@@ -1024,32 +1373,47 @@ namespace BrutalOrchestraAr
                 if (achievement == Achievement.ACH_Ending_Easy_EnterHardmode)
                 {
                     SendCheck("Quarry_Boss_Spared");
+                    SendCheck("I'll Make You Regret This");
                     return;
                 }
 
-                foreach (var kvp in heroAchievementMap)
-                    if (kvp.Value == achievement)
-                    {
-                        if (heroCheckName.TryGetValue(kvp.Key, out string checkName)) SendCheck(checkName);
-                        return;
-                    }
+                if (achievementCheckMap.TryGetValue(achievement, out string checkName))
+                    SendCheck(checkName);
             }
         }
 
-        [HarmonyPatch(typeof(UnlockablesManager), "TryUnlockFromID", new Type[] { typeof(string) })]
-        class BlockUnlockPatch
+        [HarmonyPatch(typeof(UnlockablesManager), "TryUnlockContent")]
+        class BlockUnlockContentPatch
         {
-            static bool Prefix(string id)
+            static bool Prefix(UnlockablesManager __instance, UnlockableModData data)
             {
                 if (AllowUnlocks) return true;
+                if (data == null) return false;
 
-                // Предметы-достижения — шлём чек, но не даём игре выдать награду
-                if (itemCheckNames.TryGetValue(id, out string itemLocName))
-                    SendCheck(itemLocName);
-                else
-                    Debug.LogWarning($"AP: TryUnlockFromID called with unknown id '{id}', no location mapping");
+                string id = Traverse.Create(data).Field("id").GetValue() as string;
+                if (!string.IsNullOrEmpty(id) && itemCheckNames.TryGetValue(id, out string loc))
+                    SendCheck(loc);
+
+                if (data.hasQuestCompletion)
+                {
+                    var game = Traverse.Create(__instance).Field("_game").GetValue<InGameDataSO>();
+                    game?.TryCompleteQuest(data.questID);
+                }
+
+                if (data.HasAchievementUnlock)
+                {
+                    var steamAch = Traverse.Create(__instance).Field("_steamAchievements").GetValue<AchievementsManagerData>();
+                    steamAch?.TryUnlockAchievement(data.AchievementID);
+                }
+
                 return false;
             }
+        }
+
+        [HarmonyPatch(typeof(UnlockablesManager), "TryUnlockHardMode")]
+        class BlockHardmodePatch
+        {
+            static bool Prefix() => AllowUnlocks;
         }
 
         private static void DumpUnlockableIDs()
@@ -1059,6 +1423,29 @@ namespace BrutalOrchestraAr
             Debug.Log("=== UNLOCKABLE IDs IN MANAGER ===");
             foreach (var (key, _) in EnumerateUnlockables(manager))
                 Debug.Log($"ID: {key}");
+        }
+        
+        [HarmonyPatch(typeof(InGameDataSO), "TryUnlockItem")]
+        class BlockItemUnlockPatch
+        {
+            static bool Prefix() => BrutalAPMod.AllowUnlocks; // false = вызов заблокирован
+        }
+
+        [HarmonyPatch(typeof(InGameDataSO), "TryUnlockCharacter")]
+        class BlockCharacterUnlockPatch
+        {
+            static bool Prefix() => BrutalAPMod.AllowUnlocks;
+        }
+        
+        [HarmonyPatch(typeof(GameInformationHolder), "PrepareGameRun")]
+        class NewRunPatch
+        {
+            static void Postfix(RunDataSO run)
+            {
+                if (run?.playerData == null || startMoneyLevel <= 0) return;
+                run.playerData.AddCurrency(startMoneyLevel * 10);
+                Debug.Log($"AP: Granted start money: {startMoneyLevel * 10}");
+            }
         }
     }
 }
