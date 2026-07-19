@@ -15,6 +15,7 @@ Archipelago: [GitHub](https://github.com/ArchipelagoMW/Archipelago)
 	APWorld (generator)
 1. Download `brutal_orchestra.apworld` from [Releases](https://github.com/DeadEye_Dv/BrutalOrchestraArchipelago/releases).
 2. Place it in the `custom_worlds` folder of your Archipelago installation.
+3. Make your .yaml (your options) file in the Option Creator in Archipelago Launcher
 
 	Features
 - Sends checks for battles, chests, shops, hero purchases
