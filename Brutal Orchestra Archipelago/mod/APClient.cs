@@ -59,7 +59,6 @@ namespace BrutalOrchestraAr
         {
             var buffer = new byte[4096];
             var messageBuffer = new StringBuilder();
-            bool sentConnect = false;
 
             try
             {
@@ -543,6 +542,7 @@ namespace BrutalOrchestraAr
                 if (ne > ns) int.TryParse(json.Substring(ns, ne - ns), out packetIndex);
             }
             if (packetIndex == 0) BrutalAPMod.startMoneyLevel = 0;
+            if (packetIndex == 0) BrutalAPMod.abilityLevels.Clear();
 
             int itemsIdx = json.IndexOf("\"items\":[");
             if (itemsIdx == -1) return;

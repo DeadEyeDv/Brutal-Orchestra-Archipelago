@@ -1,12 +1,16 @@
-from worlds.AutoWorld import World
+from worlds.AutoWorld import World, WebWorld
 from BaseClasses import Item, ItemClassification, Location, Region, LocationProgressType
-from .options import BrutalOrchestraOptions, FarBattleCount, OrpBattleCount, \
+from .options import BrutalOrchestraOptions, option_groups, FarBattleCount, OrpBattleCount, \
     FarMoneyChests, OrpMoneyChests, FarArtifactChests, OrpArtifactChests, \
     FarShopCount, OrpShopCount, BossCount, GardenBattleCount, GardenMoneyChests, \
-    GardenArtifactChests, GardenShopCount
+    GardenArtifactChests
+
+class BrutalOrchestraWeb(WebWorld):
+    option_groups = option_groups 
 
 class BrutalOrchestraWorld(World):
     game = "Brutal Orchestra"
+    web = BrutalOrchestraWeb()
 
     options_dataclass = BrutalOrchestraOptions
     options: BrutalOrchestraOptions
@@ -84,7 +88,17 @@ class BrutalOrchestraWorld(World):
         "The Magnum Opus", "The Immortal", "The Sadist", "The Impaled", "The Mistake",
         "The Emotional Disaster", "The Exhumed",
         "Progressive Start Money",
-        "Human Canvas", "Egg of Incubus", "Exquisite Corpse"
+        "Human Canvas", "Egg of Incubus", "Exquisite Corpse",
+        "Garden Access",
+        "Boyle Progressive Ability", "Hans Progressive Ability",
+        "Anton Progressive Ability", "Splig Progressive Ability", "Pearl Progressive Ability",
+        "Thype Progressive Ability", "Griffin Progressive Ability", "Arnold Progressive Ability",
+        "Dimitri Progressive Ability", "LongLiver Progressive Ability", "Clive Progressive Ability",
+        "Kleiver Progressive Ability", "Cranes Progressive Ability", "Agon Progressive Ability",
+        "Rags Progressive Ability", "SmokeStacks Progressive Ability", "Leviat Progressive Ability",
+        "Gospel Progressive Ability", "Bimini Progressive Ability", "Burnout Progressive Ability",
+        "Fennec Progressive Ability", "Mordrake Progressive Ability", "Mung Progressive Ability",
+        "ShellyK Progressive Ability", "Formosus Progressive Ability", "Nowak Progressive Ability"
     ]
 
     item_name_to_id = {name: 10000 + i for i, name in enumerate(item_names)}
@@ -363,8 +377,6 @@ class BrutalOrchestraWorld(World):
         location_name_to_id[f"Garden_MoneyChest_{i}"] = 3100 + i - 1
     for i in range(1, GardenArtifactChests.range_end + 1):
         location_name_to_id[f"Garden_ArtifactChest_{i}"] = 3200 + i - 1
-    for i in range(1, GardenShopCount.range_end + 1):
-        location_name_to_id[f"Garden_Shop_{i}"] = 3300 + i - 1
     location_name_to_id["Garden Boss"] = 3400
 
     # Victory locations (numbered, up to 10)
@@ -387,8 +399,6 @@ class BrutalOrchestraWorld(World):
     #   'all_locations' -> bool, ALL active_locations must be reachable (except self)
     # ------------------------------------------------------------------
 
-    # Локации с "требует всё" — взаимно исключаем их друг у друга в all_locations,
-    # иначе получится циклическая зависимость (A требует B, B требует A).
     ALL_LOCATIONS_MUTUAL_EXCLUDE = {
         "Mordrake's Untold Tale", "Brutal Orchestra", "The Director's Final Frame"
     }
@@ -413,7 +423,7 @@ class BrutalOrchestraWorld(World):
         # Quarry
         "Above the Mountains": "quarry", "The End?": "quarry",
         "I'll Make You Regret This": "quarry", "Quarry_Boss_Spared": "quarry",
-        # Far/Orp + Hardmode (регион свой, hardmode отдельным правилом)
+        # Far/Orp + Hardmode
         "The Trickster": "far", "The Naked": "far", "The Failure": "far",
         "The Incinerated": "far", "The Emotional Disaster": "far",
         "The Coward": "far", "Bloodline Drinker": "far", "Boom, Headshot": "far",
@@ -421,7 +431,7 @@ class BrutalOrchestraWorld(World):
         "Mass Grave Matters": "far",
         "The Terminal": "orp", "The Psychic": "orp", "The Black Lung": "orp",
         "The Messiah": "orp", "Crisis of Faith": "orp", "Master of the Mountains": "orp",
-        # Garden (регион уже требует Orp+Quarry+Hardmode)
+        # Garden 
         "The Immortal": "garden", "The Magnum Opus": "garden", "The Exhumed": "garden",
         "The Mass": "garden", "The Cougar": "garden", "The Mistake": "garden",
         "All that is Mortal": "garden", "The Witness": "garden", "The Divine": "garden",
@@ -436,7 +446,7 @@ class BrutalOrchestraWorld(World):
         "Every Stone Tuned": "garden", "God of Phalanges, Palms and Pain": "garden",
         "Dumb Luck": "garden", "Notable Skill": "garden",
         "Burgeoning Expertise": "garden", "Total and Absolute Mastery": "garden",
-        # Пары героев (Osman/Heaven) — все Garden
+        # Heroes items (Osman/Heaven) — все Garden
         "Another Dud": "garden", "Purple Heart": "garden", "Rorscach Test": "garden",
         "Roentgen Rays": "garden", "Health Insurance": "garden", "A Gift?": "garden",
         "Rotund Amphibian": "garden", "Gamified Cephalopod": "garden",
@@ -465,13 +475,52 @@ class BrutalOrchestraWorld(World):
         "Bronzo's 2 Cents": "garden", "What the !@#$ Nowak?": "orp",
         "Okay Nowak, Seriously Stop!": "far", "That's it Nowak!": "far",
         "Time to Die!": "orp", "The Shyster": "garden",
-        # Финальные квесты
+        # Final Quests
         "Mordrake's Untold Tale": "garden", "Brutal Orchestra": "garden",
         "The Director's Final Frame": "garden",
     }
 
+    PEARL_LOCATIONS = ["Another Dud", "Purple Heart", "Rorscach Test", "Roentgen Rays",
+    "Health Insurance", "A Gift?", "Rotund Amphibian", "Gamified Cephalopod",
+    "You Can Do It!", "Russki Vampire", "Extra Stitching", "Pain Killers",
+    "Lycanthrope's Core", "Head of Scrybe", "Fishing Rod", "Effigy of the Mettle Mother",
+    "Gilded Mirror", "Spiked Collar", "Someone Else's Wedding Ring", "Fist Full of Ash",
+    "Czech Hedgehog", "Cremation", "Deworming Pills", "Medical Leches",
+    "Holy Chalice", "Seeds of the Consumed", "The Jersey", "Pontiff's Parade",
+    "Mystery Ration", "Ol' Stumpy", "Iron Necklace", "The Apple",
+    "Trepanation", "Wheel of Fortune", "Prussian Blue", "DDT",
+    "Blind Faith", "Modern Medicine", "Divine Mud", "Opulent Egg",
+    "Sculptur's Tools", "Gospel's Severed Head", "Wels Catfish", "Left Shoe",
+    "Meatre Worm", "Norris!", "Burn-Bottle Batch", "Royal Pine",
+    "Coelacanth", "Sacred Shrub"]
+
+    LONG_LOCATIONS = [
+        "The Parasite", "The Corpse", "The Trickster", "The Black Lung",
+        "The Emotional Disaster", "The Exhumed", "Kingslayer",
+        "Ichor's Last Wish", "Fog's Prescience", "The Work of an Artists",
+        "God of Phalanges, Palms and Pain", "The Second Coming",
+        "Notable Skill", "Burgeoning Expertise", "Total and Absolute Mastery",
+        "Mass Grave Matters", "The Mistake", "War Criminal",
+        "Bronzo's 2 Cents", "What the !@#$ Nowak?", "Okay Nowak, Seriously Stop!",
+        "That's it Nowak!", "Time to Die!", "The Shyster",
+        "Mordrake's Untold Tale", "Brutal Orchestra", "The Director's Final Frame",
+    ]
+
     ITEM_ACCESS_RULES = {
-        "What are You Doing?": {"any_heroes": ["Fennec", "Kleiver", "Cranes", "Rags", "Leviat", "Gospel", "Mordrake"]},
+        "What are You Doing?": {
+            "hero_abilities": [
+                ("Fennec", 2), ("Kleiver", 1), ("Cranes", 2),
+                ("Rags", 1), ("Leviat", 0), ("Gospel", 1), ("Mordrake", 1),
+            ],
+        },
+        "Brutality": {
+            "heroes": ["Burnout", "Rags"],
+            "abilities": [
+                ("Burnout Progressive Ability", 1),
+                ("Boyle Progressive Ability", 1),
+                ("Rags Progressive Ability", 2),
+            ],
+        },
         "So Long Liver": {"heroes": ["LongLiver"]},
         "War Criminal": {"any_heroes": ["Arnold"], "or_items": ["Demon Core"]},
 
@@ -522,7 +571,7 @@ class BrutalOrchestraWorld(World):
         "Time to Die!": {"hardmode": True, "prior": "That's it Nowak!"},
         "The Shyster": {"prior": "Time to Die!"},
 
-        # Финалы
+        # Final Quests
         "Mordrake's Untold Tale": {"all_heroes": True, "all_locations": True},
         "Brutal Orchestra": {"all_heroes": True, "all_locations": True},
         "The Director's Final Frame": {"all_heroes": True, "all_locations": True},
@@ -539,15 +588,20 @@ class BrutalOrchestraWorld(World):
         self.shop_count_orp = self.options.orp_shop_count.value
         self.boss_count = self.options.boss_count.value
         self.hardmode = self.options.hardmode.value
-        self.bronzo_quest = self.options.bronzo_quest.value
-        self.director_quest = self.options.director_quest.value
-        self.mordrake_quest = self.options.mordrake_quest.value
         self.win_count = self.options.win_count.value
         self.death_link = self.options.death_link.value
+        self.long_locations = self.options.long_locations.value
+        self.goal_type = self.options.goal_type.value
+        self.pearl_count = self.options.pearl_count.value
+        if self.goal_type in (1, 2):   # pearls / brutal_orchestra требуют Garden
+            self.hardmode = True
+            if self.goal_type == 2:
+                self.long_locations = 1
+        self.pearl_count = self.options.pearl_count.value
+        self.ability_sanity = self.options.ability_sanity.value
 
         self.active_locations = set()
         self.active_locations.update([
-            "Far Shore Access", "Orpheum Access", "Quarry Access",
             "BuyHero_1", "BuyHero_2", "BuyHero_3", "BuyHero_4"
         ])
         for i in range(1, self.far_battle_count + 1):
@@ -576,9 +630,6 @@ class BrutalOrchestraWorld(World):
         for name in self.hero_names:
             self.active_locations.add(self.hero_check_names[name])
 
-        # ID квестовых предметов Bronzo/Director/Mordrake — исключаем их из
-        # безусловного добавления ниже, чтобы локация появлялась только
-        # когда соответствующий квест реально включён в опциях.
         bronzo_uids = {"Bronzo1", "Bronzo2", "BronzoBossPhase1", "Bronzo3", "BronzoBossPhase2",
                        "Bronzo4", "BronzoBossPhase3", "Bronzo5", "BronzoBossPhase4",
                        "Bronzo6", "BronzoBoss"}
@@ -589,27 +640,12 @@ class BrutalOrchestraWorld(World):
         quest_uids = bronzo_uids | director_uids | mordrake_uids
 
         for uid in self.item_unlock_ids:
-            if uid in quest_uids:
-                continue
             cname = self.item_check_names.get(uid, f"Item_{uid}")
             self.active_locations.add(cname)
 
-        # Optional quests
-        if self.bronzo_quest:
-            for uid in bronzo_uids:
-                self.active_locations.add(self.item_check_names[uid])
-        if self.director_quest:
-            for uid in director_uids:
-                self.active_locations.add(self.item_check_names[uid])
-        if self.mordrake_quest:
-            for uid in mordrake_uids:
-                self.active_locations.add(self.item_check_names[uid])
-
         self.active_locations.add("Quarry_Boss_Spared")
-        if self.mordrake_quest:
-            self.active_locations.add("Mordrake's Untold Tale")
-        if self.director_quest:
-            self.active_locations.add("The Director's Final Frame")
+        self.active_locations.add("Mordrake's Untold Tale")
+        self.active_locations.add("The Director's Final Frame")
 
         if self.hardmode:
             for i in range(1, self.options.garden_battle_count.value + 1):
@@ -618,15 +654,12 @@ class BrutalOrchestraWorld(World):
                 self.active_locations.add(f"Garden_MoneyChest_{i}")
             for i in range(1, self.options.garden_artifact_chests.value + 1):
                 self.active_locations.add(f"Garden_ArtifactChest_{i}")
-            for i in range(1, self.options.garden_shop_count.value + 1):
-                self.active_locations.add(f"Garden_Shop_{i}")
             self.active_locations.add("Garden Boss")
 
         # Victory locations (always numbered)
         for i in range(1, self.win_count + 1):
             self.active_locations.add(f"Garden Boss Defeat {i}" if self.hardmode else f"Quarry Boss Defeat {i}")
 
-                # в конце generate_early, после всех self.active_locations.add(...)
         print(f"[BruOrch DEBUG] active_locations count: {len(self.active_locations)}")
 
     def fill_slot_data(self):
@@ -641,18 +674,18 @@ class BrutalOrchestraWorld(World):
             "shop_orp": self.shop_count_orp,
             "boss_count": self.boss_count,
             "hardmode": bool(self.hardmode),
-            "bronzo_quest": bool(self.bronzo_quest),
-            "director_quest": bool(self.director_quest),
-            "mordrake_quest": bool(self.mordrake_quest),
             "win_count": self.win_count,
-            "death_link": bool(self.death_link)
+            "death_link": bool(self.death_link),
+            "goal_type": self.goal_type,
+            "pearl_count": self.pearl_count,
+            "ability_sanity": bool(self.ability_sanity),
+            "long_locations": bool(self.long_locations)
         }
         if self.hardmode:
             data.update({
                 "garden_battle_count": self.options.garden_battle_count.value,
                 "garden_money_chests": self.options.garden_money_chests.value,
-                "garden_artifact_chests": self.options.garden_artifact_chests.value,
-                "garden_shop_count": self.options.garden_shop_count.value,
+                "garden_artifact_chests": self.options.garden_artifact_chests.value
             })
         return data
 
@@ -668,7 +701,8 @@ class BrutalOrchestraWorld(World):
         menu.connect(far)
         far.connect(orp)
         orp.connect(quarry)
-        quarry.connect(garden)
+        orp.connect(garden)
+        quarry.connect(vic)
         garden.connect(vic)
 
         far_prefixes = ("Far Shore Access", "Far_Battle", "Far_MoneyChest", "Far_ArtifactChest",
@@ -677,7 +711,7 @@ class BrutalOrchestraWorld(World):
                         "BuyHero_3", "BuyHero_4", "Shop_Orp", "Orp Boss")
         quarry_prefixes = ("Quarry Access", "Quarry Boss")
         garden_prefixes = ("Garden_Battle", "Garden_MoneyChest", "Garden_ArtifactChest",
-                           "Garden_Shop", "Garden Boss")
+                           "Garden Boss")
 
         zone_map = {"far": far, "orp": orp, "quarry": quarry, "garden": garden}
         victory_prefixes = ("Quarry Boss Defeat", "Garden Boss Defeat")
@@ -707,16 +741,20 @@ class BrutalOrchestraWorld(World):
             region.locations.append(loc)
 
     def create_item(self, name: str) -> Item:
+        progression_items = {"Orpheum Access", "Quarry Access", "Garden Access", "Hardmode Access"}
         if name in ("5 Coins", "10 Coins", "15 Coins"):
             classification = ItemClassification.filler
         elif name == "Progressive Start Money":
             classification = ItemClassification.useful
-        else:
+        elif name in progression_items or name.endswith(" Progressive Ability") \
+                or name in self.hero_check_names.values():
             classification = ItemClassification.progression
+        else:
+            classification = ItemClassification.useful
         return Item(name, classification, self.item_name_to_id[name], self.player)
 
     def create_items(self):
-        skip_always = {"Boss 1", "Boss 2", "Boss 3", "Progressive Start Money",
+        skip_always = {"5 Coins", "10 Coins", "15 Coins", "Boss 1", "Boss 2", "Boss 3", "Progressive Start Money",
                "Winstreak 2 Bundle", "Winstreak 3 Bundle", "Winstreak 4 Bundle",
                "Winstreak 5 Bundle", "HundredPercent Bundle",
                # Неиспользуемые базовые шмотки
@@ -733,25 +771,58 @@ class BrutalOrchestraWorld(World):
                "Shattered Amulet", "Silk Tourniquet", "Soul Contract", "Stimpak",
                "Strange Beads", "The Unfinished Bolt", "Thick Gloves",
                "Thorned Vines", "Tumor"}
-        skip_if_bronzo_off = {"Bronzo's 2 Cents (Item)", "Counterfeit coins", "Bananas", "Bronzo's Stupid Hat"}
-        skip_if_director_off = {"Broken Doll", "Infernal Eye", "Vyacheslav's Last Sip", "Wailing Whistle",
-                               "Cursed Sword", "Enigma", "The Master's Sickle", "Esoteric Artifact"}
-        skip_if_mordrake_off = {"Mordrake's Untold Tale"}
-
         created_items = []
         for name in self.item_names:
-            if name in skip_always or \
-               (not self.bronzo_quest and name in skip_if_bronzo_off) or \
-               (not self.director_quest and name in skip_if_director_off) or \
-               (not self.mordrake_quest and name in skip_if_mordrake_off):
+            if name in skip_always or name.endswith(" Progressive Ability"):
                 continue
             created_items.append(self.create_item(name))
 
         for _ in range(self.options.start_money_count.value):
             created_items.append(self.create_item("Progressive Start Money"))
 
+        if self.ability_sanity:
+            for name in self.item_names:
+                if name.endswith(" Progressive Ability") and name != "Mung Progressive Ability":
+                    created_items.append(self.create_item(name))
+                    created_items.append(self.create_item(name))
+
         total_active = len(self.active_locations)
-        needed = total_active - self.win_count - len(created_items)
+        capacity = total_active - self.win_count
+        needed = capacity - len(created_items)
+
+        if needed < 0:
+            excess = -needed
+            while excess > 0:
+                idx = next((i for i, it in enumerate(created_items) if it.name == "Progressive Start Money"), None)
+                if idx is None:
+                    break
+                created_items.pop(idx)
+                excess -= 1
+            if excess > 0:
+                seen = set()
+                for i in range(len(created_items) - 1, -1, -1):
+                    if excess <= 0:
+                        break
+                    it = created_items[i]
+                    if it.name.endswith(" Progressive Ability"):
+                        if it.name in seen:
+                            created_items.pop(i)
+                            excess -= 1
+                        else:
+                            seen.add(it.name)
+            if excess > 0:
+                # крайняя мера: срезаем и первые копии абилок
+                for i in range(len(created_items) - 1, -1, -1):
+                    if excess <= 0:
+                        break
+                    if created_items[i].name.endswith(" Progressive Ability"):
+                        created_items.pop(i)
+                        excess -= 1
+                        print(f"[BruOrch] WARNING: pool trimmed by {(-needed)} items to fit locations")
+            if excess > 0:
+                raise Exception("Brutal Orchestra: not enough locations for required items. "
+                                "Increase location counts or disable ability_sanity.")
+            needed = 0
 
         for i in range(needed):
             coin = ("5 Coins", "10 Coins", "15 Coins")[i % 3]
@@ -762,9 +833,9 @@ class BrutalOrchestraWorld(World):
         for i in range(1, self.win_count + 1):
             loc_name = f"Garden Boss Defeat {i}" if self.hardmode else f"Quarry Boss Defeat {i}"
             self.multiworld.get_location(loc_name, self.player).place_locked_item(
-                Item("Garden Boss Defeat" if self.hardmode else "Quarry Boss Defeat", ItemClassification.progression, None, self.player)
-            )
-
+                Item("Garden Boss Defeat" if self.hardmode else "Quarry Boss Defeat",
+                     ItemClassification.progression, None, self.player))
+            
         print(f"[BruOrch DEBUG] itempool count for this player: {len(created_items)}")
         print(f"[BruOrch DEBUG] total_active: {total_active}, win_count: {self.win_count}, needed: {needed}")        
 
@@ -781,6 +852,8 @@ class BrutalOrchestraWorld(World):
         min_heroes = spec.get("min_heroes")
         all_heroes = spec.get("all_heroes", False)
         all_locations = spec.get("all_locations", False)
+        abilities = spec.get("abilities")
+        hero_abilities = spec.get("hero_abilities")
         self_loc_name = spec.get("_self_loc_name")
 
         def hero_names_excluding_self():
@@ -808,6 +881,19 @@ class BrutalOrchestraWorld(World):
                         return False
                 elif not any_hero_ok:
                     return False
+            if abilities and self.ability_sanity:
+                for item_name, count in abilities:
+                    if not state.has(item_name, self.player, count):
+                        return False
+            if hero_abilities:
+                def hero_ok(hero_short, ab_count):
+                    if not self._hero_reachable(state, hero_short):
+                        return False
+                    if self.ability_sanity and ab_count > 0:
+                        return state.has(f"{hero_short} Progressive Ability", self.player, ab_count)
+                    return True
+                if not any(hero_ok(h, c) for h, c in hero_abilities):
+                    return False
             if prior and not state.can_reach_location(prior, self.player):
                 return False
             if min_heroes:
@@ -834,8 +920,8 @@ class BrutalOrchestraWorld(World):
             lambda state: state.has("Orpheum Access", self.player)
         self.multiworld.get_entrance("Orpheum -> Quarry", self.player).access_rule = \
             lambda state: state.has("Quarry Access", self.player)
-        self.multiworld.get_entrance("Quarry -> Garden", self.player).access_rule = \
-            lambda state: state.has("Hardmode Access", self.player)
+        self.multiworld.get_entrance("Orpheum -> Garden", self.player).access_rule = \
+            lambda state: state.has("Hardmode Access", self.player) and state.has("Garden Access", self.player)
 
         # Item/achievement access rules from the req. table
         for loc_name, spec in self.ITEM_ACCESS_RULES.items():
@@ -845,8 +931,17 @@ class BrutalOrchestraWorld(World):
                 self.multiworld.get_location(loc_name, self.player).access_rule = \
                     self._make_access_rule(spec_with_self)
 
-        self.multiworld.completion_condition[self.player] = \
-            lambda state: state.has("Garden Boss Defeat" if self.hardmode else "Quarry Boss Defeat", self.player, self.win_count)
+        if self.goal_type == 2:
+            self.multiworld.completion_condition[self.player] = \
+                lambda state: state.can_reach_location("Brutal Orchestra", self.player)
+        elif self.goal_type == 1:
+            self.multiworld.completion_condition[self.player] = \
+                lambda state: sum(1 for loc in self.PEARL_LOCATIONS
+                                  if state.can_reach_location(loc, self.player)) >= self.pearl_count
+        else:
+            self.multiworld.completion_condition[self.player] = \
+                lambda state: state.has("Garden Boss Defeat" if self.hardmode else "Quarry Boss Defeat",
+                                        self.player, self.win_count)
 
         if not self.hardmode:
             for name in self.active_locations:
@@ -855,3 +950,8 @@ class BrutalOrchestraWorld(World):
                 if zone == "garden" or spec.get("hardmode"):
                     self.multiworld.get_location(name, self.player).progress_type = \
                         LocationProgressType.EXCLUDED
+                if not self.long_locations:
+                    for name in self.LONG_LOCATIONS:
+                        if name in self.active_locations:
+                            self.multiworld.get_location(name, self.player).progress_type = \
+                                LocationProgressType.EXCLUDED
