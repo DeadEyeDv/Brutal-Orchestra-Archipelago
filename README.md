@@ -21,7 +21,7 @@ Archipelago: [GitHub](https://github.com/ArchipelagoMW/Archipelago)
 - Sends checks for battles, chests, shops, hero purchases
 - Locked zones require access items
 - Configurable shop, battle and chest counts via options
-- Ability sanity for every hero (including Nowak)
+- Ability sanity for every hero (including Nowak) (For this to work you must have 50+ additional locations via Bittle, Chests or Shop)
 - Supports multiworld
 
 	Building from source
