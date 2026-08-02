@@ -56,7 +56,6 @@ namespace BrutalOrchestraAr
         public static bool suppressDeathLink = false;
         public static bool InCombat = false;
         public static int processedItemIndex = 0;
-        public static int winCount = 1;
 
         public static void UnlockWithAP(Action a)
         {
@@ -654,12 +653,12 @@ namespace BrutalOrchestraAr
         
         public static void SaveRunCounter()
         {
-            PlayerPrefs.SetInt("BrutalAP_RunCounter_" + (APClient.CurrentSeed ?? "default"), runCounter);
+            PlayerPrefs.SetInt("BrutalAP_RunCounter_" + (APClient.StateKey), runCounter);
             PlayerPrefs.Save();
         }
         public static void LoadRunCounter()
         {
-            runCounter = PlayerPrefs.GetInt("BrutalAP_RunCounter_" + (APClient.CurrentSeed ?? "default"), 0);
+            runCounter = PlayerPrefs.GetInt("BrutalAP_RunCounter_" + (APClient.StateKey), 0);
         }
         
         void OnGUI()
@@ -777,7 +776,18 @@ namespace BrutalOrchestraAr
 
                 if ((GUILayout.Button("Send", GUILayout.Width(60)) || enterPressed) && !string.IsNullOrEmpty(chatInput))
                 {
-                    apClient?.SendChat(chatInput);
+                    if (chatInput.Trim().ToLower() == "/disconnect" || chatInput.Trim().ToLower() == "/dc")
+                    {
+                        apClient?.Disconnect();
+                        apClient = null;
+                        AddChatLine("*** Disconnected ***");
+                        showGui = true;   // сразу показать окно коннекта
+                        showChat = false;
+                    }
+                    else
+                    {
+                        apClient?.SendChat(chatInput);
+                    }
                     chatInput = "";
                     if (enterPressed) Event.current.Use();
                     GUI.FocusControl("ChatInput");
@@ -804,6 +814,7 @@ namespace BrutalOrchestraAr
             showGui = false;
             showChat = true;
             FlushPendingChecks();
+            ResyncAllChecks();
             AddChatLine("*** Connected ***");
             Debug.Log("AP: Connected successfully");
         }
@@ -860,12 +871,8 @@ namespace BrutalOrchestraAr
                     ParseInt(slotDataJson, "\"orp_artifact_chests\"", ref orpArt);
                     ParseInt(slotDataJson, "\"shop_far\"", ref shopFar);
                     ParseInt(slotDataJson, "\"shop_orp\"", ref shopOrp);
-                    ParseInt(slotDataJson, "\"boss_count\"", ref bosses);
-                    int winC = 1;
                     ParseInt(slotDataJson, "\"goal_type\"", ref goalType);
-                    ParseInt(slotDataJson, "\"win_count\"", ref winC);
                     ParseInt(slotDataJson, "\"pearl_count\"", ref pearlCount);
-                    winCount = winC;
                     ParseBool(slotDataJson, "\"hardmode\"", ref hardmode);
                     ParseBool(slotDataJson, "\"death_link\"", ref deathLink);
                     ParseBool(slotDataJson, "\"ability_sanity\"", ref abilitySanity);
@@ -1039,7 +1046,7 @@ namespace BrutalOrchestraAr
 
                 UnlockWithAP(() =>
                 {
-                    foreach (var id in new[] { "Boyle", "Hans" })
+                    foreach (var id in new[] { "Boyle_CH", "Hans_CH" })
                         Debug.Log($"AP: Starter hero '{id}' -> newly unlocked: {game.TryUnlockCharacter(id)}");
                 });
             };
@@ -1060,7 +1067,7 @@ namespace BrutalOrchestraAr
 
         public static void LoadCountersForCurrentSeed()
         {
-            string key = "BrutalAP_Counters_" + (APClient.CurrentSeed ?? "default");
+            string key = "BrutalAP_Counters_" + (APClient.StateKey);
             if (!PlayerPrefs.HasKey(key)) return;
             string data = PlayerPrefs.GetString(key, "");
             if (string.IsNullOrEmpty(data)) return;
@@ -1134,7 +1141,7 @@ namespace BrutalOrchestraAr
                 { "gardenArtifact", gardenArtifactChestCount }, { "gardenShop", gardenShopCount }
             };
             string data = string.Join(";", counters.Select(kv => kv.Key + "=" + kv.Value));
-            string key = "BrutalAP_Counters_" + (APClient.CurrentSeed ?? "default");
+            string key = "BrutalAP_Counters_" + (APClient.StateKey);
             PlayerPrefs.SetString(key, data);
             PlayerPrefs.Save();
             Debug.Log("AP: Saved counters: " + data);
@@ -1142,15 +1149,18 @@ namespace BrutalOrchestraAr
 
         public static void SaveSentChecks()
         {
-            string key = "BrutalAP_SentChecks_" + (APClient.CurrentSeed ?? "default");
+            if (string.IsNullOrEmpty(APClient.CurrentSeed)) return;  // не сохраняем без сида
+            string key = "BrutalAP_SentChecks_" + APClient.CurrentSeed;
             PlayerPrefs.SetString(key, string.Join(";", sentChecks.ToArray()));
             PlayerPrefs.Save();
         }
 
         public static void LoadSentChecks()
         {
-            string key = "BrutalAP_SentChecks_" + (APClient.CurrentSeed ?? "default");
-            if (!PlayerPrefs.HasKey(key)) return;
+            if (string.IsNullOrEmpty(APClient.CurrentSeed)) return;  // сид не готов — не трогаем sentChecks
+            sentChecks.Clear();
+            string key = "BrutalAP_SentChecks_" + APClient.CurrentSeed;
+            if (!PlayerPrefs.HasKey(key)) { Debug.Log("AP: No saved checks for this seed (fresh)"); return; }
             string data = PlayerPrefs.GetString(key, "");
             if (string.IsNullOrEmpty(data)) return;
             foreach (var c in data.Split(';'))
@@ -1161,13 +1171,13 @@ namespace BrutalOrchestraAr
 
         public static void LoadBossDefeatCount()
         {
-            string key = "BrutalAP_BossDefeat_" + (APClient.CurrentSeed ?? "default");
+            string key = "BrutalAP_BossDefeat_" + (APClient.StateKey);
             if (PlayerPrefs.HasKey(key)) bossDefeatCount = PlayerPrefs.GetInt(key);
         }
 
         public static void SaveBossDefeatCount()
         {
-            string key = "BrutalAP_BossDefeat_" + (APClient.CurrentSeed ?? "default");
+            string key = "BrutalAP_BossDefeat_" + (APClient.StateKey);
             PlayerPrefs.SetInt(key, bossDefeatCount);
             PlayerPrefs.Save();
         }
@@ -1189,6 +1199,17 @@ namespace BrutalOrchestraAr
         {
             while (pendingChecks.Count > 0) SendCheck(pendingChecks.Dequeue());
         }
+        
+        public static void ResyncAllChecks()
+        {
+            if (apClient == null) return;
+            var ids = new List<long>();
+            foreach (var loc in sentChecks)
+                if (locationIDs.TryGetValue(loc, out long id))
+                    ids.Add(id);
+            apClient.SendChecks(ids);
+            Debug.Log($"AP: Resynced {ids.Count} checks to server");
+        }
 
         public static void SendCheck(string locationName)
         {
@@ -1199,12 +1220,16 @@ namespace BrutalOrchestraAr
                 return;
             }
 
-            if (sentChecks.Contains(locationName)) return;
-            sentChecks.Add(locationName);
-            SaveSentChecks();
+            if (!sentChecks.Contains(locationName))
+            {
+                sentChecks.Add(locationName);
+                SaveSentChecks();
+            }
             Debug.Log("CHECK: " + locationName);
-            apClient.SendCheck(locationName);
+            apClient.SendCheck(locationName);   // шлём всегда — сервер сам отсеет дубли
             SaveCounters();
+            if (goalType == 0 && (locationName == "The End?" || locationName == "I'll Make You Regret This"))
+                apClient?.SendGoal();
             if (goalType == 1 && pearlCheckNames.Contains(locationName) && CountPearls() >= pearlCount)
                 apClient?.SendGoal();
             if (goalType == 2 && locationName == "Brutal Orchestra")
@@ -1515,7 +1540,7 @@ namespace BrutalOrchestraAr
 
         public static void SaveAbilityLevels()
         {
-            string key = "BrutalAP_Abilities_" + (APClient.CurrentSeed ?? "default");
+            string key = "BrutalAP_Abilities_" + (APClient.StateKey);
             PlayerPrefs.SetString(key, string.Join(";", abilityLevels.Select(kv => kv.Key + "=" + kv.Value)));
             PlayerPrefs.Save();
         }
@@ -1523,7 +1548,7 @@ namespace BrutalOrchestraAr
         public static void LoadAbilityLevels()
         {
             abilityLevels.Clear();
-            string key = "BrutalAP_Abilities_" + (APClient.CurrentSeed ?? "default");
+            string key = "BrutalAP_Abilities_" + (APClient.StateKey);
             string data = PlayerPrefs.GetString(key, "");
             foreach (var pair in data.Split(';'))
             {
@@ -1534,7 +1559,7 @@ namespace BrutalOrchestraAr
 
         public static void SaveRunAbilityPick()
         {
-            string key = "BrutalAP_RunAbilities_" + (APClient.CurrentSeed ?? "default");
+            string key = "BrutalAP_RunAbilities_" + (APClient.StateKey);
             // формат: entity:idx,idx;entity2:idx,idx
             var parts = runAbilityPick.Select(kv => kv.Key + ":" + string.Join(",", kv.Value));
             PlayerPrefs.SetString(key, string.Join(";", parts));
@@ -1544,7 +1569,7 @@ namespace BrutalOrchestraAr
         public static void LoadRunAbilityPick()
         {
             runAbilityPick.Clear();
-            string key = "BrutalAP_RunAbilities_" + (APClient.CurrentSeed ?? "default");
+            string key = "BrutalAP_RunAbilities_" + (APClient.StateKey);
             string data = PlayerPrefs.GetString(key, "");
             if (string.IsNullOrEmpty(data)) return;
             foreach (var entry in data.Split(';'))
@@ -1560,11 +1585,26 @@ namespace BrutalOrchestraAr
         public static void ClearRunAbilityPick()
         {
             runAbilityPick.Clear();
-            PlayerPrefs.DeleteKey("BrutalAP_RunAbilities_" + (APClient.CurrentSeed ?? "default"));
+            PlayerPrefs.DeleteKey("BrutalAP_RunAbilities_" + (APClient.StateKey));
             runCounter++;
             SaveRunCounter();
             PlayerPrefs.Save();
             Debug.Log($"AP: Rerolled ability picks for new run (run #{runCounter})");
+        }
+        
+        public static void SyncCheckedFromServer(List<long> checkedIds)
+        {
+            if (checkedIds == null || checkedIds.Count == 0) return;
+            var idToName = new Dictionary<long, string>();
+            foreach (var kv in locationIDs) idToName[kv.Value] = kv.Key;
+
+            int added = 0;
+            foreach (var id in checkedIds)
+                if (idToName.TryGetValue(id, out string name) && sentChecks.Add(name))
+                    added++;
+
+            if (added > 0) SaveSentChecks();
+            Debug.Log($"AP: Synced {checkedIds.Count} checked from server ({added} new into local)");
         }
 
         // ==========Хелперы==========
@@ -1667,22 +1707,6 @@ namespace BrutalOrchestraAr
                 ProcessPendingActions();
 
                 RunDataSO run = __instance.Run;
-                if (run != null && run.IsCurrentCardType(CardType.Boss))
-                {
-                    int zone = run.CurrentZoneID;
-                    SendCheck(zone == 0 ? "Far Boss" : zone == 1 ? "Orp Boss" : "Quarry Boss");
-                    if (zone == 2)
-                    {
-                        bossDefeatCount++;
-                        SaveBossDefeatCount();
-                        SendCheck(IsHardmode
-                            ? $"Garden Boss Defeat {bossDefeatCount}"
-                            : $"Quarry Boss Defeat {bossDefeatCount}");
-                        if (goalType == 0 && bossDefeatCount >= winCount) apClient?.SendGoal();
-                    }
-
-                    return;
-                }
 
                 int zoneID = run?.CurrentZoneID ?? -1;
                 if (IsHardmode && zoneID == 2)
@@ -1896,6 +1920,7 @@ namespace BrutalOrchestraAr
         {
             static void Postfix(Achievement achievement)
             {
+                Debug.Log($"AP: AchPatch FIRED ach={achievement} allowUnlocks={AllowUnlocks} apClient={(apClient != null)}");
                 if (AllowUnlocks) return;
 
                 if (achievement == Achievement.ACH_Ending_Easy_EnterHardmode)
@@ -1906,7 +1931,11 @@ namespace BrutalOrchestraAr
                 }
 
                 if (achievementCheckMap.TryGetValue(achievement, out string checkName))
+                {
+                    Debug.Log($"AP: AchPatch mapped -> {checkName}");
                     SendCheck(checkName);
+                }
+                else Debug.Log($"AP: AchPatch NO MAP for {achievement}");
             }
         }
 

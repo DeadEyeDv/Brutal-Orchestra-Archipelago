@@ -2,7 +2,7 @@ from worlds.AutoWorld import World, WebWorld
 from BaseClasses import Item, ItemClassification, Location, Region, LocationProgressType
 from .options import BrutalOrchestraOptions, option_groups, FarBattleCount, OrpBattleCount, \
     FarMoneyChests, OrpMoneyChests, FarArtifactChests, OrpArtifactChests, \
-    FarShopCount, OrpShopCount, BossCount, GardenBattleCount, GardenMoneyChests, \
+    FarShopCount, OrpShopCount, GardenBattleCount, GardenMoneyChests, \
     GardenArtifactChests
 
 class BrutalOrchestraWeb(WebWorld):
@@ -586,9 +586,7 @@ class BrutalOrchestraWorld(World):
         self.orp_artifact_chests = self.options.orp_artifact_chests.value
         self.shop_count_far = self.options.far_shop_count.value
         self.shop_count_orp = self.options.orp_shop_count.value
-        self.boss_count = self.options.boss_count.value
         self.hardmode = self.options.hardmode.value
-        self.win_count = self.options.win_count.value
         self.death_link = self.options.death_link.value
         self.long_locations = self.options.long_locations.value
         self.goal_type = self.options.goal_type.value
@@ -620,12 +618,6 @@ class BrutalOrchestraWorld(World):
             self.active_locations.add(f"Shop_Far_{i}")
         for i in range(1, self.shop_count_orp + 1):
             self.active_locations.add(f"Shop_Orp_{i}")
-        if self.boss_count >= 1:
-            self.active_locations.add("Far Boss")
-        if self.boss_count >= 2:
-            self.active_locations.add("Orp Boss")
-        if self.boss_count >= 3:
-            self.active_locations.add("Quarry Boss")
 
         for name in self.hero_names:
             self.active_locations.add(self.hero_check_names[name])
@@ -643,7 +635,6 @@ class BrutalOrchestraWorld(World):
             cname = self.item_check_names.get(uid, f"Item_{uid}")
             self.active_locations.add(cname)
 
-        self.active_locations.add("Quarry_Boss_Spared")
         self.active_locations.add("Mordrake's Untold Tale")
         self.active_locations.add("The Director's Final Frame")
 
@@ -654,11 +645,6 @@ class BrutalOrchestraWorld(World):
                 self.active_locations.add(f"Garden_MoneyChest_{i}")
             for i in range(1, self.options.garden_artifact_chests.value + 1):
                 self.active_locations.add(f"Garden_ArtifactChest_{i}")
-            self.active_locations.add("Garden Boss")
-
-        # Victory locations (always numbered)
-        for i in range(1, self.win_count + 1):
-            self.active_locations.add(f"Garden Boss Defeat {i}" if self.hardmode else f"Quarry Boss Defeat {i}")
 
         print(f"[BruOrch DEBUG] active_locations count: {len(self.active_locations)}")
 
@@ -672,9 +658,7 @@ class BrutalOrchestraWorld(World):
             "orp_artifact_chests": self.orp_artifact_chests,
             "shop_far": self.shop_count_far,
             "shop_orp": self.shop_count_orp,
-            "boss_count": self.boss_count,
             "hardmode": bool(self.hardmode),
-            "win_count": self.win_count,
             "death_link": bool(self.death_link),
             "goal_type": self.goal_type,
             "pearl_count": self.pearl_count,
@@ -706,18 +690,14 @@ class BrutalOrchestraWorld(World):
         garden.connect(vic)
 
         far_prefixes = ("Far Shore Access", "Far_Battle", "Far_MoneyChest", "Far_ArtifactChest",
-                        "BuyHero_1", "BuyHero_2", "Shop_Far", "Far Boss")
+                        "BuyHero_1", "BuyHero_2", "Shop_Far")
         orp_prefixes = ("Orpheum Access", "Orp_Battle", "Orp_MoneyChest", "Orp_ArtifactChest",
-                        "BuyHero_3", "BuyHero_4", "Shop_Orp", "Orp Boss")
-        quarry_prefixes = ("Quarry Access", "Quarry Boss")
-        garden_prefixes = ("Garden_Battle", "Garden_MoneyChest", "Garden_ArtifactChest",
-                           "Garden Boss")
+                        "BuyHero_3", "BuyHero_4", "Shop_Orp")
+        quarry_prefixes = ("Quarry Access")
+        garden_prefixes = ("Garden_Battle", "Garden_MoneyChest", "Garden_ArtifactChest")
 
         zone_map = {"far": far, "orp": orp, "quarry": quarry, "garden": garden}
-        victory_prefixes = ("Quarry Boss Defeat", "Garden Boss Defeat")
         for name in self.active_locations:
-            if name.startswith(victory_prefixes):
-                continue
             if name in self.LOCATION_ZONES:
                 region = zone_map[self.LOCATION_ZONES[name]]
             elif name.startswith(far_prefixes):
@@ -731,13 +711,6 @@ class BrutalOrchestraWorld(World):
             else:
                 region = far
             loc = Location(self.player, name, self.location_name_to_id[name], region)
-            region.locations.append(loc)
-
-        # Create victory locations
-        for i in range(1, self.win_count + 1):
-            loc_name = f"Garden Boss Defeat {i}" if self.hardmode else f"Quarry Boss Defeat {i}"
-            region = garden if self.hardmode else quarry
-            loc = Location(self.player, loc_name, None, region)
             region.locations.append(loc)
 
     def create_item(self, name: str) -> Item:
@@ -754,7 +727,7 @@ class BrutalOrchestraWorld(World):
         return Item(name, classification, self.item_name_to_id[name], self.player)
 
     def create_items(self):
-        skip_always = {"5 Coins", "10 Coins", "15 Coins", "Boss 1", "Boss 2", "Boss 3", "Progressive Start Money",
+        skip_always = {"5 Coins", "10 Coins", "15 Coins", "Boss 1", "Boss 2", "Boss 3", "Quarry Boss Defeat", "Garden Boss Defeat", "Progressive Start Money",
                "Winstreak 2 Bundle", "Winstreak 3 Bundle", "Winstreak 4 Bundle",
                "Winstreak 5 Bundle", "HundredPercent Bundle",
                # Неиспользуемые базовые шмотки
@@ -787,7 +760,7 @@ class BrutalOrchestraWorld(World):
                     created_items.append(self.create_item(name))
 
         total_active = len(self.active_locations)
-        capacity = total_active - self.win_count
+        capacity = total_active
         needed = capacity - len(created_items)
 
         if needed < 0:
@@ -829,15 +802,9 @@ class BrutalOrchestraWorld(World):
             created_items.append(self.create_item(coin))
 
         self.multiworld.itempool += created_items
-
-        for i in range(1, self.win_count + 1):
-            loc_name = f"Garden Boss Defeat {i}" if self.hardmode else f"Quarry Boss Defeat {i}"
-            self.multiworld.get_location(loc_name, self.player).place_locked_item(
-                Item("Garden Boss Defeat" if self.hardmode else "Quarry Boss Defeat",
-                     ItemClassification.progression, None, self.player))
             
         print(f"[BruOrch DEBUG] itempool count for this player: {len(created_items)}")
-        print(f"[BruOrch DEBUG] total_active: {total_active}, win_count: {self.win_count}, needed: {needed}")        
+        print(f"[BruOrch DEBUG] total_active: {total_active},needed: {needed}")        
 
     def _hero_reachable(self, state, hero_short_name):
         return state.has(self.hero_check_names[hero_short_name], self.player)
@@ -938,10 +905,10 @@ class BrutalOrchestraWorld(World):
             self.multiworld.completion_condition[self.player] = \
                 lambda state: sum(1 for loc in self.PEARL_LOCATIONS
                                   if state.can_reach_location(loc, self.player)) >= self.pearl_count
-        else:
+        else:  # normal
             self.multiworld.completion_condition[self.player] = \
-                lambda state: state.has("Garden Boss Defeat" if self.hardmode else "Quarry Boss Defeat",
-                                        self.player, self.win_count)
+                lambda state: state.can_reach_location("The End?", self.player) \
+                              or state.can_reach_location("I'll Make You Regret This", self.player)
 
         if not self.hardmode:
             for name in self.active_locations:
@@ -950,8 +917,9 @@ class BrutalOrchestraWorld(World):
                 if zone == "garden" or spec.get("hardmode"):
                     self.multiworld.get_location(name, self.player).progress_type = \
                         LocationProgressType.EXCLUDED
-                if not self.long_locations:
-                    for name in self.LONG_LOCATIONS:
-                        if name in self.active_locations:
-                            self.multiworld.get_location(name, self.player).progress_type = \
-                                LocationProgressType.EXCLUDED
+
+        if not self.long_locations:
+            for name in self.LONG_LOCATIONS:
+                if name in self.active_locations:
+                    self.multiworld.get_location(name, self.player).progress_type = \
+                        LocationProgressType.EXCLUDED

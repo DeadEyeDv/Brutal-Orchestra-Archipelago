@@ -6,9 +6,9 @@ class Deathlink(Toggle):
     display_name = "Deathlink"
 
 class GoalType(Choice):
-    """boss_wins: победить босса N раз. pearls: собрать N жемчужин. brutal_orchestra: получить достижение Brutal Orchestra (100%)."""
+    """normal: win game on normal difficulty. pearls: collect N pearls. brutal_orchestra: get achievement Brutal Orchestra (100%)."""
     display_name = "Goal Type"
-    option_boss_wins = 0
+    option_normal = 0
     option_pearls = 1
     option_brutal_orchestra = 2
     default = 1
@@ -19,13 +19,6 @@ class PearlCount(Range):
     range_start = 1
     range_end = 50
     default = 6
-
-class WinCount(Range):
-    """Number of final boss victories required to complete the goal."""
-    display_name = "Win Count"
-    range_start = 1
-    range_end = 10
-    default = 1
 
 class LongLocations(Toggle):
     """Enable long locations (Winstreak, Quests Bronzo/Mordrake/Director, 100%)."""
@@ -138,7 +131,6 @@ class BrutalOrchestraOptions(PerGameCommonOptions):
     death_link: Deathlink
     goal_type: GoalType
     pearl_count: PearlCount
-    win_count: WinCount
     long_locations: LongLocations
     ability_sanity: AbilitySanity
     far_battle_count: FarBattleCount
@@ -149,7 +141,6 @@ class BrutalOrchestraOptions(PerGameCommonOptions):
     orp_artifact_chests: OrpArtifactChests
     far_shop_count: FarShopCount
     orp_shop_count: OrpShopCount
-    boss_count: BossCount
     hardmode: Hardmode
     garden_battle_count: GardenBattleCount
     garden_money_chests: GardenMoneyChests
@@ -162,6 +153,5 @@ option_groups = [
         FarMoneyChests, OrpMoneyChests, GardenMoneyChests,
         FarArtifactChests, OrpArtifactChests, GardenArtifactChests,
         FarShopCount, OrpShopCount,
-        BossCount,
     ]),
 ]

@@ -15,6 +15,8 @@ namespace BrutalOrchestraAr
         private string playerName;
         private string password;
         public static string CurrentSeed = "";
+        public static string CurrentSlot = null;
+        public static string StateKey => (CurrentSeed ?? "default") + "_" + (CurrentSlot ?? "noslot");
         public bool IsOpen => socket != null && socket.State == WebSocketState.Open;
 
         public APClient(string hostPort, string name, string pass = null)
@@ -123,7 +125,7 @@ namespace BrutalOrchestraAr
                 Debug.Log("AP: Successfully connected to room!");
                 ParsePlayers(json);
                 SendGetDataPackage();
-                
+
                 int slotDataIndex = json.IndexOf("\"slot_data\":{");
                 if (slotDataIndex != -1)
                 {
@@ -135,7 +137,11 @@ namespace BrutalOrchestraAr
                         else if (json[i] == '}') { sdDepth--; if (sdDepth == 0) { bracketClose = i; break; } }
                     }
                     if (bracketClose != -1)
+                    {
                         BrutalAPMod.InitSlotData(json.Substring(bracketOpen, bracketClose - bracketOpen + 1));
+                        var checkedIds = ParseLongArray(json, "\"checked_locations\":[");
+                        BrutalAPMod.SyncCheckedFromServer(checkedIds);
+                    }
                 }
                 BrutalAPMod.OnConnectSucceeded();
             }
@@ -514,6 +520,7 @@ namespace BrutalOrchestraAr
             string myUuid = Guid.NewGuid().ToString("N");
             string pwdField = password == null ? "null" : "\"" + password.Replace("\"", "\\\"") + "\"";
             var json = "[{\"cmd\":\"Connect\",\"password\":" + pwdField + ",\"game\":\"Brutal Orchestra\",\"name\":\"" + playerName + "\",\"uuid\":\"" + myUuid + "\",\"version\":{\"major\":0,\"minor\":6,\"build\":7,\"class\":\"Version\"},\"items_handling\":7,\"tags\":[\"AP\"]}]";
+            CurrentSlot = playerName;
             var bytes = Encoding.UTF8.GetBytes(json);
             await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
             Debug.Log("AP: Sent Connect");
@@ -594,6 +601,16 @@ namespace BrutalOrchestraAr
             else Debug.LogError("Unknown location: " + locationName);
         }
         
+        public async void SendChecks(List<long> locationIds)
+        {
+            if (!IsOpen) return;
+            if (locationIds == null || locationIds.Count == 0) return;
+            string ids = string.Join(",", locationIds);
+            string json = "[{\"cmd\":\"LocationChecks\",\"locations\":[" + ids + "]}]";
+            var bytes = Encoding.UTF8.GetBytes(json);
+            await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+        }
+        
         public async void SendDeathLink(string cause)
         {
             if (!IsOpen || !BrutalAPMod.DeathLinkEnabled) return;
@@ -615,6 +632,45 @@ namespace BrutalOrchestraAr
             var bytes = Encoding.UTF8.GetBytes(json);
             await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
             Debug.Log("AP: Sent goal complete!");
+        }
+        
+        List<long> ParseIntArray(string json, string marker)
+        {
+            var result = new List<long>();
+            int start = json.IndexOf(marker);
+            if (start == -1) return result;
+            start += marker.Length;
+            int end = json.IndexOf(']', start);
+            if (end == -1) return result;
+            string inner = json.Substring(start, end - start);
+            foreach (var part in inner.Split(','))
+                if (long.TryParse(part.Trim(), out long v)) result.Add(v);
+            return result;
+        }
+        
+        List<long> ParseLongArray(string json, string marker)
+        {
+            var result = new List<long>();
+            int start = json.IndexOf(marker);
+            if (start == -1) return result;
+            start += marker.Length;
+            int end = json.IndexOf(']', start);
+            if (end == -1) return result;
+            string inner = json.Substring(start, end - start);
+            foreach (var part in inner.Split(','))
+                if (long.TryParse(part.Trim(), out long v)) result.Add(v);
+            return result;
+        }
+        
+        public void Disconnect()
+        {
+            try
+            {
+                if (socket != null && (socket.State == WebSocketState.Open || socket.State == WebSocketState.Connecting))
+                    socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "user disconnect", CancellationToken.None);
+            }
+            catch (Exception e) { Debug.Log("AP: Disconnect error — " + e.Message); }
+            Debug.Log("AP: Disconnected by user");
         }
     }
 }
