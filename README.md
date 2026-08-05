@@ -8,7 +8,7 @@ Archipelago: [GitHub](https://github.com/ArchipelagoMW/Archipelago)
 
 1. Download "Brutal Orchestra Archipelago" from [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3767731509) 
 2. Turn on this mod in the game and reboot the game
-3. Change / delete your save file
+3. Change / delete your save file and restart your game
 4. Connect to your slot and start your game (If you unable to start a run after connecting, reboot game and connect AFTER you started a new run)
 
    
