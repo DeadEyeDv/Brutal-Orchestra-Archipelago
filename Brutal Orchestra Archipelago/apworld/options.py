@@ -86,6 +86,13 @@ class OrpShopCount(Range):
     range_end = 100
     default = 6
 
+class BuyFoolCount(Range):
+    """Number of Fool shop locations."""
+    display_name = "Buy Fool Count"
+    range_start = 3
+    range_end = 15
+    default = 6
+
 class BossCount(Range):
     """Number of boss checks (0–3)."""
     display_name = "Boss Count"
@@ -141,6 +148,7 @@ class BrutalOrchestraOptions(PerGameCommonOptions):
     orp_artifact_chests: OrpArtifactChests
     far_shop_count: FarShopCount
     orp_shop_count: OrpShopCount
+    buy_fool_count: BuyFoolCount
     hardmode: Hardmode
     garden_battle_count: GardenBattleCount
     garden_money_chests: GardenMoneyChests
@@ -152,6 +160,6 @@ option_groups = [
         FarBattleCount, OrpBattleCount, GardenBattleCount,
         FarMoneyChests, OrpMoneyChests, GardenMoneyChests,
         FarArtifactChests, OrpArtifactChests, GardenArtifactChests,
-        FarShopCount, OrpShopCount,
+        FarShopCount, OrpShopCount, BuyFoolCount,
     ]),
 ]

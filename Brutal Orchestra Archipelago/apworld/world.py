@@ -3,7 +3,11 @@ from BaseClasses import Item, ItemClassification, Location, Region, LocationProg
 from .options import BrutalOrchestraOptions, option_groups, FarBattleCount, OrpBattleCount, \
     FarMoneyChests, OrpMoneyChests, FarArtifactChests, OrpArtifactChests, \
     FarShopCount, OrpShopCount, GardenBattleCount, GardenMoneyChests, \
-    GardenArtifactChests
+    GardenArtifactChests, BuyFoolCount
+from .items import item_names, hero_names, item_unlock_ids
+from .locations import (hero_check_names, item_check_names, LOCATION_ZONES,
+                        PEARL_LOCATIONS, LONG_LOCATIONS, ALL_LOCATIONS_MUTUAL_EXCLUDE)
+from .rules import ITEM_ACCESS_RULES
 
 class BrutalOrchestraWeb(WebWorld):
     option_groups = option_groups 
@@ -15,324 +19,28 @@ class BrutalOrchestraWorld(World):
     options_dataclass = BrutalOrchestraOptions
     options: BrutalOrchestraOptions
 
-    item_names = [
-        "Orpheum Access", "Quarry Access",
-        "Boss 1", "Boss 2", "Boss 3",
-        # Standard items (paints removed)
-        "Anemone Thread", "Beads of Something or Other", "Blood Thirsty Idol",
-        "Boonario", "Bosch's Fist", "Clash of the Bleached", "Crown of Thorns",
-        "Dew-Covered Sticker", "Diseased Bodypart", "Dried Paintbrush",
-        "Eel's Skin", "Fennel's Blessing", "Flesh-Piercing Skewer",
-        "Gilded Rage", "Golden Gun", "Heaven-Bound Noose", "Idle Hands",
-        "Inhalant", "Jumper Cables", "Lucky Charm", "Mangled Messiah",
-        "Marrow's Reach", "Mirror Shard", "Mithridatism", "Mung Moon",
-        "Mutually Assured Destruction", "Myopia Glasses", "Padded Gloves",
-        "Pile of Dirt", "Pox Blanket", "Prayer Beads", "Rabbit's Foot",
-        "Roid Rage", "Scab-Knuckled Gloves", "Sealed Envelope",
-        "Shattered Amulet", "Silk Tourniquet", "Soul Contract", "Stimpak",
-        "Strange Beads", "The Unfinished Bolt", "Thick Gloves",
-        "Thorned Vines", "Tumor",
-        "5 Coins", "10 Coins", "15 Coins",
-        "Hardmode Access",
-        # Victory items
-        "Quarry Boss Defeat", "Garden Boss Defeat",
-        # Unlock items (AP progression items that directly unlock game content)
-        "Rib of Eve", "Immolated Fairy", "Skinned Skate", "Strange Fruit",
-        "Unfortunate Prophecy", "Can o' Worms", "Box of Medals", "Wicker Child",
-        "Lady Gloves", "Convergent Rage", "The Ideal Form of Trash", "Lust Pudding",
-        "Someone Else's Face", "Counterfeit Medal", "Consolation Prize",
-        "Egg of Firmament", "Ascetic Egg", "Indulgence", "The First Born",
-        "Dried Paint", "Lil Orro", "Chain of Command", "Gump Ming Goa",
-        "Ed's Tags", "Tape Worm Pills", "Shard of Nowak", "All that is Mortal",
-        "Brigade of Dis", "The Brand", "The Human Soul", "Idea of Evil",
-        "Mini Mordrake", "Mung? Unlock", "Fog's Prescience (NPC)",
-        "Conscription Notice", "Ichthys", "Bloating Coffers", "Serpent's Head",
-        "Caretaker's Cudgel", "Howling Log", "Tondal's Vision", "Peg Leg",
-        "Demon Core", "Harvest and Plenty", "Blood Breathing Bomb",
-        "Man Made Ovum", "Hereafter", "Ol Reliable", "The Rest of Nowak",
-        "Stillborn Egg", "Arachnid Aphrodisiac",
-        "Baltic Brine", "Dum-Dum", "Expired Medicine", "Forgotten Pump",
-        "Gentlemen's Glove", "Littering Leaflets", "Soap?",
-        "Homeless Hotline", "Lil Smiley", "Pharmaceutical Roller Coaster",
-        "Used Dog Tags", "War Bond", "Professional Procrastinator", "Vowbreaker",
-        "Sacrificial Saint", "Starving Apples", "Gift Box!", "Defective Rounds",
-        "Another Dud", "Purple Heart", "Rorscach Test", "Roentgen Rays",
-        "Health insurance", "A Gift?", "Rotund Amphibian", "Gamified Cephalopod",
-        "You Can Do It!", "Russki Vampire", "Extra Stitching", "Pain Killers",
-        "Lycanthrope's Core", "Head of Scrybe", "Fishing Rod",
-        "Effigy of the Mettle Mother", "Gilded Mirror", "Spiked Collar",
-        "The Cougar", "Someone Else's Wedding Ring", "Fist Full of Ash",
-        "Czech Hedgehog", "Cremation", "Deworming Pills", "Medical Leches",
-        "Holy Chalice", "Seeds of the Consumed", "The Jersey",
-        "Pontiff's Parade", "Mystery Ration", "Ol' Stumpy", "Iron Necklace",
-        "The Apple", "Trepanation", "Wheel of Fortune", "Prussian Blue", "DDT",
-        "Blind Faith", "Modern Medicine", "Divine Mud", "Opulent Egg",
-        "Cloth Cock", "Sculptur's Tools", "Gospel's Severed Head",
-        "Wels Catfish", "Left Shoe", "Meatre Worm", "Norris!",
-        "Burn-Bottle Batch", "Royal Pine", "Coelacanth", "Sacred Shrub",
-        "Mordrake", "Faulty Land Mine",
-        # Bronzo quest items (optional)
-        "Bronzo's 2 Cents (Item)", "Counterfeit coins", "Bananas", "Bronzo's Stupid Hat",
-        # Director's Cut (VHS) items (optional)
-        "Broken Doll", "Infernal Eye", "Vyacheslav's Last Sip", "Wailing Whistle",
-        "Cursed Sword", "Enigma", "The Master's Sickle", "Esoteric Artifact",
-        # Mordrake's Untold Tale items (optional)
-        "Mordrake's Untold Tale",
-        # Combined bundles
-        "Winstreak 2 Bundle", "Winstreak 3 Bundle", "Winstreak 4 Bundle", "Winstreak 5 Bundle",
-        "HundredPercent Bundle",
-        # Hero unlock items (achievement names, appended at end to keep existing IDs stable)
-        "The Gambler", "The Conjoined", "The Glutton", "The Trickster", "The Naked",
-        "The Failure", "The Incinerated", "The Parasite", "The Stoic", "The Zealot",
-        "The Corpse", "The Terminal", "The Psychic", "The Black Lung", "The Mass",
-        "The Magnum Opus", "The Immortal", "The Sadist", "The Impaled", "The Mistake",
-        "The Emotional Disaster", "The Exhumed",
-        "Progressive Start Money",
-        "Human Canvas", "Egg of Incubus", "Exquisite Corpse",
-        "Garden Access",
-        "Boyle Progressive Ability", "Hans Progressive Ability",
-        "Anton Progressive Ability", "Splig Progressive Ability", "Pearl Progressive Ability",
-        "Thype Progressive Ability", "Griffin Progressive Ability", "Arnold Progressive Ability",
-        "Dimitri Progressive Ability", "LongLiver Progressive Ability", "Clive Progressive Ability",
-        "Kleiver Progressive Ability", "Cranes Progressive Ability", "Agon Progressive Ability",
-        "Rags Progressive Ability", "SmokeStacks Progressive Ability", "Leviat Progressive Ability",
-        "Gospel Progressive Ability", "Bimini Progressive Ability", "Burnout Progressive Ability",
-        "Fennec Progressive Ability", "Mordrake Progressive Ability", "Mung Progressive Ability",
-        "ShellyK Progressive Ability", "Formosus Progressive Ability", "Nowak Progressive Ability"
-    ]
+    item_names = item_names
+    hero_names = hero_names
+    item_unlock_ids = item_unlock_ids
+
+    hero_check_names = hero_check_names
+    item_check_names = item_check_names
+    LOCATION_ZONES = LOCATION_ZONES
+    PEARL_LOCATIONS = PEARL_LOCATIONS
+    LONG_LOCATIONS = LONG_LOCATIONS
+    ALL_LOCATIONS_MUTUAL_EXCLUDE = ALL_LOCATIONS_MUTUAL_EXCLUDE
+
+    ITEM_ACCESS_RULES = ITEM_ACCESS_RULES
 
     item_name_to_id = {name: 10000 + i for i, name in enumerate(item_names)}
-
-    # All heroes except starters Boyle and Hans
-    hero_names = ["Anton","Splig","Pearl","Thype","Griffin","Arnold","Dimitri",
-                  "LongLiver","Clive","Kleiver","Cranes","Agon","Rags","SmokeStacks","Leviat",
-                  "Gospel","Bimini","Burnout","Fennec","Mordrake","Mung","ShellyK","Formosus"]
-
-    # Unlockable IDs that correspond to achievements
-    item_unlock_ids = [
-        "Roids","Hickory","Mobius","TheOuroboros","Smoothskin",
-        "FarShore","Orpheum","ZoneExplorer","BossSlap","RoidsMissTurn",
-        "SmoothskinTrauma","DontAct","FoolsDepleted","ShopDepleted",
-        "Ending_GameOver","LoseToBoss","ManaCostDeath","OverflowDeath",
-        "OrroSmooch","Ending_CorpseKill","SurviveStarvation",
-        "Over100Coins","OneTurnHardKill","FriendlyFireDeath","ParasiteJourney",
-        "Ending_CorpseSave",
-        # Hardmode
-        "Ending_HardMode",
-        "TriggerFingers","Charcarrion","OsmanSinnoks","Heaven",
-        "AllBosses","Ichor1","Ichor2","Ichor3","Ichor4",
-        "Fogs1","Fogs2","Fogs3","UngodEmissary",
-        "Garden","FarShoreNoCasualtiesHard","OrpheumNoCasualtiesHard",
-        "GardenNoCasualtiesHard","AllZonesNoCasualtiesHard","WorldExplorer",
-        "AllBossesSlap","BasicSpeedrun","UngodKill","SepulchreKill",
-        "XiphactinusKill","UnfinishedHeirKill","CharcarrionDecomposition",
-        "NoNowakHardEnd","NowakLoneSurvivor","HeavenDoubleSacrifice",
-        "CasualtiesCharacter5","CasualtiesEnemy30","HeadshotDeath",
-        "DamageDealt100","AntonSad",
-        # Character-specific
-        "Boyle_Osman","Boyle_Heaven",
-        "Hans_Osman","Hans_Heaven",
-        "Burnout_Osman","Burnout_Heaven",
-        "Fennec_Osman","Fennec_Heaven",
-        "Anton_Osman","Anton_Heaven",
-        "Splig_Osman","Splig_Heaven",
-        "Pearl_Osman","Pearl_Heaven",
-        "Thype_Osman","Thype_Heaven",
-        "Griffin_Osman","Griffin_Heaven",
-        "Arnold_Osman","Arnold_Heaven",
-        "Dimitri_Osman","Dimitri_Heaven",
-        "LongLiver_Osman","LongLiver_Heaven",
-        "Clive_Osman","Clive_Heaven",
-        "Kleiver_Osman","Kleiver_Heaven",
-        "Cranes_Osman","Cranes_Heaven",
-        "Agon_Osman","Agon_Heaven",
-        "Rags_Osman","Rags_Heaven",
-        "SmokeStacks_Osman","SmokeStacks_Heaven",
-        "Leviat_Osman","Leviat_Heaven",
-        "Gospel_Osman","Gospel_Heaven",
-        "Bimini_Osman","Bimini_Heaven",
-        "Mung_Osman","Mung_Heaven",
-        "Mordrake_Osman","Mordrake_Heaven",
-        "ShellyK_Osman","ShellyK_Heaven",
-        "Formosus_Osman","Formosus_Heaven",
-        "ProdigalFlee",
-        "MordrakeCH",
-        # Bronzo (optional)
-        "Bronzo1","Bronzo2","BronzoBossPhase1","Bronzo3","BronzoBossPhase2",
-        "Bronzo4","BronzoBossPhase3","Bronzo5","BronzoBossPhase4",
-        "Bronzo6","BronzoBoss",
-        # Mordrake (optional)
-        "Mordrake1","Mordrake2","Mordrake3","Mordrake4","Mordrake5","Mordrake6",
-        # Director's Cut (optional)
-        "VHSTask0","VHSTask1","VHSTask2","VHSTask3","VHSTask4","VHSTask5","VHSTask6",
-        # Winstreaks / HundredPercent
-        "Winstreak2","Winstreak3","Winstreak4","Winstreak5",
-        "HundredPercent"
-    ]
-
-    hero_check_names = {
-        "Anton": "The Gambler", "Splig": "The Conjoined", "Pearl": "The Glutton",
-        "Thype": "The Trickster", "Griffin": "The Naked", "Arnold": "The Failure",
-        "Dimitri": "The Incinerated", "LongLiver": "The Parasite", "Clive": "The Stoic",
-        "Kleiver": "The Zealot", "Cranes": "The Corpse", "Agon": "The Terminal",
-        "Rags": "The Psychic", "SmokeStacks": "The Black Lung", "Leviat": "The Mass",
-        "Gospel": "The Magnum Opus", "Bimini": "The Immortal", "Burnout": "The Sadist",
-        "Fennec": "The Impaled", "Mordrake": "The Mistake", "Mung": "The Emotional Disaster",
-        "ShellyK": "The Cougar", "Formosus": "The Exhumed"
-    }
-
-    item_check_names = {
-        "Roids": "The Juggernaut",
-        "Hickory": "The Fire and Flames",
-        "Mobius": "The Widower",
-        "TheOuroboros": "The Leviathan",
-        "Smoothskin": "The Orphan",
-        "FarShore": "Beyond the Dunes",
-        "Orpheum": "Above the Mountains",
-        "ZoneExplorer": "Thorough Explorer",
-        "BossSlap": "Throw Hands",
-        "RoidsMissTurn": "Heavyweight Champion",
-        "SmoothskinTrauma": "Emotional and Physical Annihilation",
-        "DontAct": "Nary a Finger Lifted",
-        "FoolsDepleted": "Human Resources",
-        "ShopDepleted": "Deep Pockets",
-        "Ending_GameOver": "It Happens to the Best of Us",
-        "LoseToBoss": "Honest Effort",
-        "ManaCostDeath": "Tactical Miscalculation",
-        "OverflowDeath": "Drowning in Pigment",
-        "OrroSmooch": "Smooch!",
-        "Ending_CorpseKill": "The End?",
-        "SurviveStarvation": "Swallowed by the Sea",
-        "Over100Coins": "Capital is King",
-        "OneTurnHardKill": "Brutality",
-        "FriendlyFireDeath": "What are You Doing?",
-        "ParasiteJourney": "So Long Liver",
-        "Ending_CorpseSave": "I'll Make You Regret This",
-        "Ending_HardMode": "All that is Mortal",
-        "TriggerFingers": "The Coward",
-        "Charcarrion": "The Messiah",
-        "OsmanSinnoks": "The Witness",
-        "Heaven": "The Divine",
-        "AllBosses": "Kingslayer",
-        "Ichor1": "Ichor's Last Wish", "Ichor2": "Ichor's Last Wish", "Ichor3": "Ichor's Last Wish", "Ichor4": "Ichor's Last Wish",
-        "Fogs1": "Fog's Prescience", "Fogs2": "Fog's Prescience", "Fogs3": "Fog's Prescience",
-        "UngodEmissary": "The Ungod's Demand",
-        "Garden": "Within Yourself",
-        "FarShoreNoCasualtiesHard": "Duke of the Dunes",
-        "OrpheumNoCasualtiesHard": "Master of the Mountains",
-        "GardenNoCasualtiesHard": "Garden of Earthly Delights",
-        "AllZonesNoCasualtiesHard": "The Work of an Artists",
-        "WorldExplorer": "Every Stone Tuned",
-        "AllBossesSlap": "God of Phalanges, Palms and Pain",
-        "BasicSpeedrun": "Decisive and Concise",
-        "UngodKill": "God is Dead and We Have Killed Him",
-        "SepulchreKill": "Somebody Call the Vatican",
-        "XiphactinusKill": "Bit off More Than You Can Chew",
-        "UnfinishedHeirKill": "Bloodline Drinker",
-        "CharcarrionDecomposition": "Crisis of Faith",
-        "NoNowakHardEnd": "Plot Armor",
-        "NowakLoneSurvivor": "Worthy Successor",
-        "HeavenDoubleSacrifice": "The Second Coming",
-        "CasualtiesCharacter5": "Month of Funerals",
-        "CasualtiesEnemy30": "Mass Grave Matters",
-        "HeadshotDeath": "Boom, Headshot",
-        "DamageDealt100": "War Criminal",
-        "AntonSad": "Plenty of Fish in the Desert",
-        # Character-specific
-        "Boyle_Osman": "Another Dud",
-        "Boyle_Heaven": "Purple Heart",
-        "Hans_Osman": "Rorscach Test",
-        "Hans_Heaven": "Roentgen Rays",
-        "Burnout_Osman": "Health Insurance",
-        "Burnout_Heaven": "A Gift?",
-        "Fennec_Osman": "Rotund Amphibian",
-        "Fennec_Heaven": "Gamified Cephalopod",
-        "Anton_Osman": "You Can Do It!",
-        "Anton_Heaven": "Russki Vampire",
-        "Splig_Osman": "Extra Stitching",
-        "Splig_Heaven": "Pain Killers",
-        "Pearl_Osman": "Lycanthrope's Core",
-        "Pearl_Heaven": "Head of Scrybe",
-        "Thype_Osman": "Fishing Rod",
-        "Thype_Heaven": "Effigy of the Mettle Mother",
-        "Griffin_Osman": "Gilded Mirror",
-        "Griffin_Heaven": "Spiked Collar",
-        "Arnold_Osman": "Someone Else's Wedding Ring",
-        "Arnold_Heaven": "Fist Full of Ash",
-        "Dimitri_Osman": "Czech Hedgehog",
-        "Dimitri_Heaven": "Cremation",
-        "LongLiver_Osman": "Deworming Pills",
-        "LongLiver_Heaven": "Medical Leches",
-        "Clive_Osman": "Holy Chalice",
-        "Clive_Heaven": "Seeds of the Consumed",
-        "Kleiver_Osman": "The Jersey",
-        "Kleiver_Heaven": "Pontiff's Parade",
-        "Cranes_Osman": "Mystery Ration",
-        "Cranes_Heaven": "Ol' Stumpy",
-        "Agon_Osman": "Iron Necklace",
-        "Agon_Heaven": "The Apple",
-        "Rags_Osman": "Trepanation",
-        "Rags_Heaven": "Wheel of Fortune",
-        "SmokeStacks_Osman": "Prussian Blue",
-        "SmokeStacks_Heaven": "DDT",
-        "Leviat_Osman": "Blind Faith",
-        "Leviat_Heaven": "Modern Medicine",
-        "Bimini_Osman": "Divine Mud",
-        "Bimini_Heaven": "Opulent Egg",
-        "Gospel_Osman": "Sculptur's Tools",
-        "Gospel_Heaven": "Gospel's Severed Head",
-        "Mung_Osman": "Wels Catfish",
-        "Mung_Heaven": "Left Shoe",
-        "Mordrake_Osman": "Meatre Worm",
-        "Mordrake_Heaven": "Norris!",
-        "ShellyK_Osman": "Burn-Bottle Batch",
-        "ShellyK_Heaven": "Royal Pine",
-        "Formosus_Osman": "Coelacanth",
-        "Formosus_Heaven": "Sacred Shrub",
-        "ProdigalFlee": "Fear of Gods Above",
-        "MordrakeCH": "The Mistake",
-        # Bronzo
-        "Bronzo1": "Bronzo's 2 Cents",
-        "Bronzo2": "What the !@#$ Nowak?",
-        "BronzoBossPhase1": "What the !@#$ Nowak?",
-        "Bronzo3": "Okay Nowak, Seriously Stop!",
-        "BronzoBossPhase2": "Okay Nowak, Seriously Stop!",
-        "Bronzo4": "That's it Nowak!",
-        "BronzoBossPhase3": "That's it Nowak!",
-        "Bronzo5": "Time to Die!",
-        "BronzoBossPhase4": "Time to Die!",
-        "Bronzo6": "The Shyster",
-        "BronzoBoss": "The Shyster",
-        # Mordrake
-        "Mordrake1": "Mordrake's Untold Tale",
-        "Mordrake2": "Mordrake's Untold Tale",
-        "Mordrake3": "Mordrake's Untold Tale",
-        "Mordrake4": "Mordrake's Untold Tale",
-        "Mordrake5": "Mordrake's Untold Tale",
-        "Mordrake6": "Mordrake's Untold Tale",
-        # Director's Cut
-        "VHSTask0": "The Director's Final Frame",
-        "VHSTask1": "The Director's Final Frame",
-        "VHSTask2": "The Director's Final Frame",
-        "VHSTask3": "The Director's Final Frame",
-        "VHSTask4": "The Director's Final Frame",
-        "VHSTask5": "The Director's Final Frame",
-        "VHSTask6": "The Director's Final Frame",
-        # Winstreaks
-        "Winstreak2": "Dumb Luck",
-        "Winstreak3": "Notable Skill",
-        "Winstreak4": "Burgeoning Expertise",
-        "Winstreak5": "Total and Absolute Mastery",
-        "HundredPercent": "Brutal Orchestra"
-    }
-
+    
     location_name_to_id = {
         "Far Shore Access": 100,
         "Orpheum Access": 101,
         "Quarry Access": 102,
-        "BuyHero_1": 103, "BuyHero_2": 104, "BuyHero_3": 105, "BuyHero_4": 106
     }
-
+    for i in range(1, BuyFoolCount.range_end + 1):
+        location_name_to_id[f"BuyHero_{i}"] = 103 + i - 1
     for i in range(1, FarBattleCount.range_end + 1):
         location_name_to_id[f"Far_Battle_{i}"] = 200 + i - 1
     for i in range(1, OrpBattleCount.range_end + 1):
@@ -385,198 +93,6 @@ class BrutalOrchestraWorld(World):
     for i in range(1, 11):
         location_name_to_id[f"Garden Boss Defeat {i}"] = 4100 + i
 
-    # ------------------------------------------------------------------
-    # Access rules based on the achievement/req table.
-    # Each entry may contain:
-    #   'hardmode'  -> bool, requires "Hardmode Access" item
-    #   'heroes'    -> list of hero short names, ALL must be reachable
-    #   'any_heroes'-> list of hero short names, AT LEAST ONE must be reachable
-    #   'items'     -> list of item names, ALL must be held (state.has_all)
-    #   'or_items'  -> used together with 'any_heroes' as an OR condition
-    #   'prior'     -> location name that must be reachable first (quest chains)
-    #   'min_heroes'-> minimum count of unlocked heroes required
-    #   'all_heroes'-> bool, ALL heroes must be reachable
-    #   'all_locations' -> bool, ALL active_locations must be reachable (except self)
-    # ------------------------------------------------------------------
-
-    ALL_LOCATIONS_MUTUAL_EXCLUDE = {
-        "Mordrake's Untold Tale", "Brutal Orchestra", "The Director's Final Frame"
-    }
-    
-    LOCATION_ZONES = {
-        # Far Shore (без хардмода)
-        "The Gambler": "far", "The Conjoined": "far", "The Glutton": "far",
-        "The Sadist": "far", "The Impaled": "far",
-        "The Juggernaut": "far", "The Fire and Flames": "far", "The Widower": "far",
-        "Heavyweight Champion": "far",
-        # Any → far
-        "Throw Hands": "far", "Nary a Finger Lifted": "far", "Human Resources": "far",
-        "Deep Pockets": "far", "It Happens to the Best of Us": "far", "Honest Effort": "far",
-        "Tactical Miscalculation": "far", "Drowning in Pigment": "far",
-        "Capital is King": "far", "Brutality": "far", "What are You Doing?": "far",
-        "So Long Liver": "far", "War Criminal": "far",
-        # Orpheum
-        "The Parasite": "orp", "The Stoic": "orp", "The Zealot": "orp", "The Corpse": "orp",
-        "The Leviathan": "orp", "The Orphan": "orp", "Beyond the Dunes": "orp",
-        "Thorough Explorer": "orp", "Emotional and Physical Annihilation": "orp",
-        "Smooch!": "orp", "Swallowed by the Sea": "orp",
-        # Quarry
-        "Above the Mountains": "quarry", "The End?": "quarry",
-        "I'll Make You Regret This": "quarry", "Quarry_Boss_Spared": "quarry",
-        # Far/Orp + Hardmode
-        "The Trickster": "far", "The Naked": "far", "The Failure": "far",
-        "The Incinerated": "far", "The Emotional Disaster": "far",
-        "The Coward": "far", "Bloodline Drinker": "far", "Boom, Headshot": "far",
-        "Plenty of Fish in the Desert": "far", "Duke of the Dunes": "far",
-        "Mass Grave Matters": "far",
-        "The Terminal": "orp", "The Psychic": "orp", "The Black Lung": "orp",
-        "The Messiah": "orp", "Crisis of Faith": "orp", "Master of the Mountains": "orp",
-        # Garden 
-        "The Immortal": "garden", "The Magnum Opus": "garden", "The Exhumed": "garden",
-        "The Mass": "garden", "The Cougar": "garden", "The Mistake": "garden",
-        "All that is Mortal": "garden", "The Witness": "garden", "The Divine": "garden",
-        "Within Yourself": "garden", "Garden of Earthly Delights": "garden",
-        "Decisive and Concise": "garden", "God is Dead and We Have Killed Him": "garden",
-        "Somebody Call the Vatican": "garden", "Bit off More Than You Can Chew": "garden",
-        "Plot Armor": "garden", "Worthy Successor": "garden", "The Second Coming": "garden",
-        "Month of Funerals": "garden", "Fear of Gods Above": "garden",
-        # All areas + HM → garden
-        "Kingslayer": "garden", "Ichor's Last Wish": "garden", "Fog's Prescience": "garden",
-        "The Ungod's Demand": "garden", "The Work of an Artists": "garden",
-        "Every Stone Tuned": "garden", "God of Phalanges, Palms and Pain": "garden",
-        "Dumb Luck": "garden", "Notable Skill": "garden",
-        "Burgeoning Expertise": "garden", "Total and Absolute Mastery": "garden",
-        # Heroes items (Osman/Heaven) — все Garden
-        "Another Dud": "garden", "Purple Heart": "garden", "Rorscach Test": "garden",
-        "Roentgen Rays": "garden", "Health Insurance": "garden", "A Gift?": "garden",
-        "Rotund Amphibian": "garden", "Gamified Cephalopod": "garden",
-        "You Can Do It!": "garden", "Russki Vampire": "garden",
-        "Extra Stitching": "garden", "Pain Killers": "garden",
-        "Lycanthrope's Core": "garden", "Head of Scrybe": "garden",
-        "Fishing Rod": "garden", "Effigy of the Mettle Mother": "garden",
-        "Gilded Mirror": "garden", "Spiked Collar": "garden",
-        "Someone Else's Wedding Ring": "garden", "Fist Full of Ash": "garden",
-        "Czech Hedgehog": "garden", "Cremation": "garden",
-        "Deworming Pills": "garden", "Medical Leches": "garden",
-        "Holy Chalice": "garden", "Seeds of the Consumed": "garden",
-        "The Jersey": "garden", "Pontiff's Parade": "garden",
-        "Mystery Ration": "garden", "Ol' Stumpy": "garden",
-        "Iron Necklace": "garden", "The Apple": "garden",
-        "Trepanation": "garden", "Wheel of Fortune": "garden",
-        "Prussian Blue": "garden", "DDT": "garden",
-        "Blind Faith": "garden", "Modern Medicine": "garden",
-        "Divine Mud": "garden", "Opulent Egg": "garden",
-        "Sculptur's Tools": "garden", "Gospel's Severed Head": "garden",
-        "Wels Catfish": "garden", "Left Shoe": "garden",
-        "Meatre Worm": "garden", "Norris!": "garden",
-        "Burn-Bottle Batch": "garden", "Royal Pine": "garden",
-        "Coelacanth": "garden", "Sacred Shrub": "garden",
-        # Bronzo
-        "Bronzo's 2 Cents": "garden", "What the !@#$ Nowak?": "orp",
-        "Okay Nowak, Seriously Stop!": "far", "That's it Nowak!": "far",
-        "Time to Die!": "orp", "The Shyster": "garden",
-        # Final Quests
-        "Mordrake's Untold Tale": "garden", "Brutal Orchestra": "garden",
-        "The Director's Final Frame": "garden",
-    }
-
-    PEARL_LOCATIONS = ["Another Dud", "Purple Heart", "Rorscach Test", "Roentgen Rays",
-    "Health Insurance", "A Gift?", "Rotund Amphibian", "Gamified Cephalopod",
-    "You Can Do It!", "Russki Vampire", "Extra Stitching", "Pain Killers",
-    "Lycanthrope's Core", "Head of Scrybe", "Fishing Rod", "Effigy of the Mettle Mother",
-    "Gilded Mirror", "Spiked Collar", "Someone Else's Wedding Ring", "Fist Full of Ash",
-    "Czech Hedgehog", "Cremation", "Deworming Pills", "Medical Leches",
-    "Holy Chalice", "Seeds of the Consumed", "The Jersey", "Pontiff's Parade",
-    "Mystery Ration", "Ol' Stumpy", "Iron Necklace", "The Apple",
-    "Trepanation", "Wheel of Fortune", "Prussian Blue", "DDT",
-    "Blind Faith", "Modern Medicine", "Divine Mud", "Opulent Egg",
-    "Sculptur's Tools", "Gospel's Severed Head", "Wels Catfish", "Left Shoe",
-    "Meatre Worm", "Norris!", "Burn-Bottle Batch", "Royal Pine",
-    "Coelacanth", "Sacred Shrub"]
-
-    LONG_LOCATIONS = [
-        "The Parasite", "The Corpse", "The Trickster", "The Black Lung",
-        "The Emotional Disaster", "The Exhumed", "Kingslayer",
-        "Ichor's Last Wish", "Fog's Prescience", "The Work of an Artists",
-        "God of Phalanges, Palms and Pain", "The Second Coming",
-        "Notable Skill", "Burgeoning Expertise", "Total and Absolute Mastery",
-        "Mass Grave Matters", "The Mistake", "War Criminal",
-        "Bronzo's 2 Cents", "What the !@#$ Nowak?", "Okay Nowak, Seriously Stop!",
-        "That's it Nowak!", "Time to Die!", "The Shyster",
-        "Mordrake's Untold Tale", "Brutal Orchestra", "The Director's Final Frame",
-    ]
-
-    ITEM_ACCESS_RULES = {
-        "What are You Doing?": {
-            "hero_abilities": [
-                ("Fennec", 2), ("Kleiver", 1), ("Cranes", 2),
-                ("Rags", 1), ("Leviat", 0), ("Gospel", 1), ("Mordrake", 1),
-            ],
-        },
-        "Brutality": {
-            "heroes": ["Burnout", "Rags"],
-            "abilities": [
-                ("Burnout Progressive Ability", 1),
-                ("Boyle Progressive Ability", 1),
-                ("Rags Progressive Ability", 2),
-            ],
-        },
-        "So Long Liver": {"heroes": ["LongLiver"]},
-        "War Criminal": {"any_heroes": ["Arnold"], "or_items": ["Demon Core"]},
-
-        # Far/Orp + Hardmode
-        "The Trickster": {"hardmode": True}, "The Naked": {"hardmode": True},
-        "The Failure": {"hardmode": True}, "The Incinerated": {"hardmode": True},
-        "The Emotional Disaster": {"hardmode": True},
-        "The Terminal": {"hardmode": True}, "The Psychic": {"hardmode": True},
-        "The Black Lung": {"hardmode": True},
-        "The Coward": {"hardmode": True}, "The Messiah": {"hardmode": True},
-        "Crisis of Faith": {"hardmode": True}, "Bloodline Drinker": {"hardmode": True},
-        "Boom, Headshot": {"hardmode": True}, "Mass Grave Matters": {"hardmode": True},
-        "Duke of the Dunes": {"hardmode": True}, "Master of the Mountains": {"hardmode": True},
-        "Plenty of Fish in the Desert": {"hardmode": True, "heroes": ["Anton"]},
-
-        # Garden + герои
-        "Health Insurance": {"heroes": ["Burnout"]}, "A Gift?": {"heroes": ["Burnout"]},
-        "Rotund Amphibian": {"heroes": ["Fennec"]}, "Gamified Cephalopod": {"heroes": ["Fennec"]},
-        "You Can Do It!": {"heroes": ["Anton"]}, "Russki Vampire": {"heroes": ["Anton"]},
-        "Extra Stitching": {"heroes": ["Splig"]}, "Pain Killers": {"heroes": ["Splig"]},
-        "Lycanthrope's Core": {"heroes": ["Pearl"]}, "Head of Scrybe": {"heroes": ["Pearl"]},
-        "Fishing Rod": {"heroes": ["Thype"]}, "Effigy of the Mettle Mother": {"heroes": ["Thype"]},
-        "Gilded Mirror": {"heroes": ["Griffin"]}, "Spiked Collar": {"heroes": ["Griffin"]},
-        "The Cougar": {"heroes": ["Arnold"]},
-        "Someone Else's Wedding Ring": {"heroes": ["Arnold"]}, "Fist Full of Ash": {"heroes": ["Arnold"]},
-        "Czech Hedgehog": {"heroes": ["Dimitri"]}, "Cremation": {"heroes": ["Dimitri"]},
-        "Deworming Pills": {"heroes": ["LongLiver"]}, "Medical Leches": {"heroes": ["LongLiver"]},
-        "Holy Chalice": {"heroes": ["Clive"]}, "Seeds of the Consumed": {"heroes": ["Clive"]},
-        "The Jersey": {"heroes": ["Kleiver"]}, "Pontiff's Parade": {"heroes": ["Kleiver"]},
-        "Mystery Ration": {"heroes": ["Cranes"]}, "Ol' Stumpy": {"heroes": ["Cranes"]},
-        "Iron Necklace": {"heroes": ["Agon"]}, "The Apple": {"heroes": ["Agon"]},
-        "Trepanation": {"heroes": ["Rags"]}, "Wheel of Fortune": {"heroes": ["Rags"]},
-        "Prussian Blue": {"heroes": ["SmokeStacks"]}, "DDT": {"heroes": ["SmokeStacks"]},
-        "Blind Faith": {"heroes": ["Leviat"]}, "Modern Medicine": {"heroes": ["Leviat"]},
-        "Divine Mud": {"heroes": ["Bimini"]}, "Opulent Egg": {"heroes": ["Bimini"]},
-        "Fear of Gods Above": {"heroes": ["Gospel"]},
-        "Sculptur's Tools": {"heroes": ["Gospel"]}, "Gospel's Severed Head": {"heroes": ["Gospel"]},
-        "Wels Catfish": {"heroes": ["Mung"]}, "Left Shoe": {"heroes": ["Mung"]},
-        "Meatre Worm": {"heroes": ["Mordrake"]}, "Norris!": {"heroes": ["Mordrake"]},
-        "Burn-Bottle Batch": {"heroes": ["ShellyK"]}, "Royal Pine": {"heroes": ["ShellyK"]},
-        "Coelacanth": {"heroes": ["Formosus"]}, "Sacred Shrub": {"heroes": ["Formosus"]},
-        "The Mistake": {"min_heroes": 13},
-
-        # Bronzo chain
-        "What the !@#$ Nowak?": {"hardmode": True, "prior": "Bronzo's 2 Cents"},
-        "Okay Nowak, Seriously Stop!": {"hardmode": True, "prior": "What the !@#$ Nowak?"},
-        "That's it Nowak!": {"hardmode": True, "prior": "Okay Nowak, Seriously Stop!"},
-        "Time to Die!": {"hardmode": True, "prior": "That's it Nowak!"},
-        "The Shyster": {"prior": "Time to Die!"},
-
-        # Final Quests
-        "Mordrake's Untold Tale": {"all_heroes": True, "all_locations": True},
-        "Brutal Orchestra": {"all_heroes": True, "all_locations": True},
-        "The Director's Final Frame": {"all_heroes": True, "all_locations": True},
-    }
-
     def generate_early(self):
         self.far_battle_count = self.options.far_battle_count.value
         self.orp_battle_count = self.options.orp_battle_count.value
@@ -599,9 +115,6 @@ class BrutalOrchestraWorld(World):
         self.ability_sanity = self.options.ability_sanity.value
 
         self.active_locations = set()
-        self.active_locations.update([
-            "BuyHero_1", "BuyHero_2", "BuyHero_3", "BuyHero_4"
-        ])
         for i in range(1, self.far_battle_count + 1):
             self.active_locations.add(f"Far_Battle_{i}")
         for i in range(1, self.orp_battle_count + 1):
@@ -618,6 +131,8 @@ class BrutalOrchestraWorld(World):
             self.active_locations.add(f"Shop_Far_{i}")
         for i in range(1, self.shop_count_orp + 1):
             self.active_locations.add(f"Shop_Orp_{i}")
+        for i in range(1, self.options.buy_fool_count.value + 1):
+            self.active_locations.add(f"BuyHero_{i}")
 
         for name in self.hero_names:
             self.active_locations.add(self.hero_check_names[name])
@@ -663,6 +178,7 @@ class BrutalOrchestraWorld(World):
             "goal_type": self.goal_type,
             "pearl_count": self.pearl_count,
             "ability_sanity": bool(self.ability_sanity),
+            "buy_fool_count": self.options.buy_fool_count.value,
             "long_locations": bool(self.long_locations)
         }
         if self.hardmode:
@@ -822,6 +338,7 @@ class BrutalOrchestraWorld(World):
         abilities = spec.get("abilities")
         hero_abilities = spec.get("hero_abilities")
         self_loc_name = spec.get("_self_loc_name")
+        min_from = spec.get("min_from")   
 
         def hero_names_excluding_self():
             for h in self.hero_names:
